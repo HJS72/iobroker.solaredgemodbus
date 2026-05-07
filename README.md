@@ -26,16 +26,16 @@ Hinweis: Register sind in der Admin-Seite komplett konfigurierbar.
 
 | Zweck | Typ | Default Register |
 |---|---|---:|
-| Inverter AC Power | int16 | 40083 |
-| Inverter AC Power SF | int16 | 40084 |
+| Inverter AC Power | uint16 | 40084 |
+| Inverter AC Power SF | int16 | 40085 |
 | Inverter AC Energy Total | uint32 | 40094 |
 | Inverter AC Energy SF | int16 | 40096 |
 | Meter AC Power (Grid) | int16 | 40207 |
 | Meter AC Power SF | int16 | 40211 |
-| Battery DC Power | float32 (little-word) | 57716 |
-| Battery Energy Max | float32 (little-word) | 57726 |
-| Battery SOC | float32 (little-word) | 57732 |
-| Battery SOC Min (optional) | float32 (little-word) | 0 (deaktiviert) |
+| Battery DC Power | float32 (little-word) | 102837 |
+| Battery Energy Max | float32 (little-word) | 102787 |
+| Battery SOC | float32 (little-word) | 102853 |
+| Battery Operating State | uint32 (word-swap) | 102855 |
 
 ## Formeln
 
@@ -104,10 +104,10 @@ Wenn `Solaredge_Leistung`, `Solaredge_Energie_Tag`, `PV_Leistung` oder `PV_Energ
 ### 1. Register-Adressen in ioBroker Admin korrekt?
 
 In der Admin-Seite unter Tab `Registers` müssen die Inverter-Register genau so konfiguriert sein:
-- Inverter AC Power: **40083** (nicht 40085 oder ähnlich)
-- Inverter AC Power SF: **40084** (nicht 40086)
-- Inverter AC Energy WH: **40094** (nicht 40095)
-- Inverter AC Energy WH SF: **40096** (nicht 40097)
+- Inverter AC Power: **40084** (uint16)
+- Inverter AC Power SF: **40085** (int16)
+- Inverter AC Energy WH: **40094** (uint32)
+- Inverter AC Energy WH SF: **40096** (int16)
 
 ### 2. Adapter-Log prüfen
 

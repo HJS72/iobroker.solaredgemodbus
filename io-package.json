@@ -55,8 +55,8 @@
       "Grid_Leistung": "gridPower"
     },
     "registers": {
-      "inverterAcPower": 40083,
-      "inverterAcPowerSf": 40084,
+      "inverterAcPower": 40084,
+      "inverterAcPowerSf": 40085,
       "inverterAcEnergyWh": 40094,
       "inverterAcEnergyWhSf": 40096,
       "meterAcPower": 40207,
@@ -64,7 +64,7 @@
       "batteryDcPower": 102837,
       "batteryEnergyMax": 102787,
       "batterySoc": 102853,
-      "batteryOperatingState": 103238
+      "batteryOperatingState": 102855
     }
   },
   "objects": [],
