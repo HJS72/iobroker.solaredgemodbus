@@ -887,6 +887,12 @@ class Solaredgemodbus extends utils.Adapter {
         batteryEnergyMaxOut,
       );
 
+      // If battery is neutral (not charging or discharging), set time values to 0/"" 
+      if (batteryAcPower === null || Math.abs(batteryAcPower) <= 1) {
+        batteryTime = 0;
+        batteryTargetClock = "";
+      }
+
       await this.setNumberState("Batterie_Energie_max", batteryEnergyMaxOut, 1);
       await this.setNumberState("Batterie_Leistung", batteryAcPower, 1);
       await this.setNumberState("Batterie_SOC", batterySocOut, 1);
