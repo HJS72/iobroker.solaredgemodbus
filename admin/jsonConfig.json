@@ -72,6 +72,16 @@
           "sm": 3,
           "md": 3
         },
+        "readRetryCount": {
+          "type": "number",
+          "label": "Read retries per block",
+          "min": 0,
+          "max": 10,
+          "step": 1,
+          "xs": 12,
+          "sm": 3,
+          "md": 3
+        },
         "writeIntervalMs": {
           "type": "number",
           "label": "Write interval (ms)",

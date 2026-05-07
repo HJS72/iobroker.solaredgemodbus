@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "solaredgemodbus",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "titleLang": {
       "en": "SolarEdge Modbus",
       "de": "SolarEdge Modbus"
@@ -41,6 +41,7 @@
     "modbusTimeoutMs": 7000,
     "maxReadLen": 40,
     "readIntervalMs": 150,
+    "readRetryCount": 1,
     "writeIntervalMs": 100,
     "pollIntervalSec": 1,
     "batterySocMin": 0,

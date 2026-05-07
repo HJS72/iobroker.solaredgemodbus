@@ -489,6 +489,7 @@ class Solaredgemodbus extends utils.Adapter {
     const CIRCUIT_BREAK_MS = 5 * 60 * 1000; // 5 minutes
     const FATAL_ERROR_AFTER = 10;
     const readIntervalMs = Math.max(0, Number(this.config.readIntervalMs) || 150);
+    const readRetryCount = Math.max(0, Math.min(10, Math.floor(Number(this.config.readRetryCount) || 1)));
     const now = Date.now();
 
     for (const group of groups) {
@@ -505,7 +506,8 @@ class Solaredgemodbus extends utils.Adapter {
       const len = group.end - group.start + 1;
       let data = null;
       let lastErr = null;
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      const maxAttempts = 1 + readRetryCount;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           const res = await this.client.readHoldingRegisters(group.start, len);
           data = res.data;
@@ -513,7 +515,7 @@ class Solaredgemodbus extends utils.Adapter {
           break;
         } catch (err) {
           lastErr = err;
-          if (attempt < 2) {
+          if (attempt < maxAttempts) {
             await this.waitMs(50);
           }
         }
