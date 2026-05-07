@@ -59,6 +59,7 @@ class Solaredgemodbus extends utils.Adapter {
     this.formulaWarnings = new Set();
     this.invalidBatteryOperatingStateAddressWarned = false;
     this.legacyAddressWarnings = new Set();
+    this.diagnosticWarnings = new Set();
     // Circuit-breaker: tracks consecutive timeouts per register block
     // Map<groupStart, { consecutiveErrors: number, skipUntil: number }>
     this.registerCircuitBreaker = new Map();
@@ -161,6 +162,40 @@ class Solaredgemodbus extends utils.Adapter {
     }
     const state = Math.trunc(value);
     return BATTERY_OPERATING_STATE_VALUES.includes(state) ? state : null;
+  }
+
+  warnOnce(key, message, level = "warn") {
+    if (this.diagnosticWarnings.has(key)) {
+      return;
+    }
+    this.diagnosticWarnings.add(key);
+    this.log[level](message);
+  }
+
+  logConfiguredRegistersOnce(registers) {
+    if (this.diagnosticWarnings.has("configured-register-plan")) {
+      return;
+    }
+    const entries = [
+      ["inverterAcPower", registers.inverterAcPower],
+      ["inverterAcPowerSf", registers.inverterAcPowerSf],
+      ["inverterAcEnergyWh", registers.inverterAcEnergyWh],
+      ["inverterAcEnergyWhSf", registers.inverterAcEnergyWhSf],
+      ["meterAcPower", registers.meterAcPower],
+      ["meterAcPowerSf", registers.meterAcPowerSf],
+      ["batteryDcPower", registers.batteryDcPower],
+      ["batteryEnergyMax", registers.batteryEnergyMax],
+      ["batterySoc", registers.batterySoc],
+      ["batteryOperatingState", registers.batteryOperatingState ?? registers.write103237],
+    ]
+      .map(([key, value]) => {
+        const absolute = this.resolveAbsoluteAddress(value, key);
+        const offset = Number.isFinite(absolute) ? absolute - 40001 : "invalid";
+        return `${key}=${value} (absolute ${absolute}, offset ${offset})`;
+      })
+      .join(", ");
+    this.diagnosticWarnings.add("configured-register-plan");
+    this.log.info(`Configured Modbus register plan: ${entries}`);
   }
 
   async onStateChange(id, state) {
@@ -466,14 +501,11 @@ class Solaredgemodbus extends utils.Adapter {
 
         if (next.consecutiveErrors >= FATAL_ERROR_AFTER) {
           const itemList = group.items.map((i) => `${i.key}(${i.address})`).join(", ");
-          this.log.error(
-            `Register block ${group.start}-${group.end} (${itemList}) failed ${next.consecutiveErrors}x. ` +
-              `Check adapter config: are register addresses configured correctly? Stopping adapter.`,
-          );
           this.registerCircuitBreaker.set(group.start, next);
-          await this.setConnectionStatus(false);
-          this.terminate(`Register block ${group.start}-${group.end} unreachable after ${FATAL_ERROR_AFTER} attempts`);
-          return out;
+          throw new Error(
+            `Fatal register config error: block ${group.start}-${group.end} (${itemList}) unreachable after ` +
+              `${FATAL_ERROR_AFTER} attempts (${err.message})`,
+          );
         } else if (next.consecutiveErrors >= CIRCUIT_BREAK_AFTER) {
           next.skipUntil = now + CIRCUIT_BREAK_MS;
           this.log.warn(
@@ -541,39 +573,60 @@ class Solaredgemodbus extends utils.Adapter {
       await this.ensureConnected();
 
       const r = this.config.registers || {};
+      this.logConfiguredRegistersOnce(r);
       const raw = await this.readBatchedRegisters(r);
+      const rawSlice = (key, len) =>
+        Array.isArray(raw[key]) && raw[key].length >= len ? raw[key] : Array(len).fill(null);
 
-      const invPowerRaw = this.regsToInt16(raw.invPower[0]);
-      const invPowerSf = this.regsToInt16(raw.invPowerSf[0]);
+      const invPowerRegs = rawSlice("invPower", 1);
+      const invPowerSfRegs = rawSlice("invPowerSf", 1);
+      const invPowerRaw = this.regsToInt16(invPowerRegs[0]);
+      const invPowerSf = this.regsToInt16(invPowerSfRegs[0]);
       const inverterAcPower = this.applyScale(invPowerRaw, invPowerSf, "int16");
+      if (!Number.isFinite(inverterAcPower)) {
+        this.warnOnce(
+          "inverter-power-null",
+          `Solaredge_Leistung unresolved: inverterAcPower register=${r.inverterAcPower}, sfRegister=${r.inverterAcPowerSf}, raw=${invPowerRegs[0]}, rawScaled=${invPowerRaw}, sf=${invPowerSf}`,
+        );
+      }
 
-      const invEnergyRawRegs = raw.invEnergy;
+      const invEnergyRawRegs = rawSlice("invEnergy", 2);
       const invEnergyRaw = this.regsToUInt32(invEnergyRawRegs[0], invEnergyRawRegs[1]);
-      const invEnergySf = this.regsToInt16(raw.invEnergySf[0]);
+      const invEnergySfRegs = rawSlice("invEnergySf", 1);
+      const invEnergySf = this.regsToInt16(invEnergySfRegs[0]);
       const inverterEnergyWh = this.applyScale(invEnergyRaw, invEnergySf, "uint32");
+      if (!Number.isFinite(inverterEnergyWh)) {
+        this.warnOnce(
+          "inverter-energy-null",
+          `Solaredge_Energie_Tag input unresolved: inverterAcEnergyWh register=${r.inverterAcEnergyWh}, sfRegister=${r.inverterAcEnergyWhSf}, raw=[${invEnergyRawRegs.join(", ")}], rawScaled=${invEnergyRaw}, sf=${invEnergySf}`,
+        );
+      }
 
-      const gridPowerRaw = this.regsToInt16(raw.meterPower[0]);
-      const gridPowerSf = this.regsToInt16(raw.meterPowerSf[0]);
+      const meterPowerRegs = rawSlice("meterPower", 1);
+      const meterPowerSfRegs = rawSlice("meterPowerSf", 1);
+      const gridPowerRaw = this.regsToInt16(meterPowerRegs[0]);
+      const gridPowerSf = this.regsToInt16(meterPowerSfRegs[0]);
       const gridPowerBase = this.applyScale(gridPowerRaw, gridPowerSf, "int16");
       let gridPower = gridPowerBase;
       if (this.config.invertGridPowerSign) {
         gridPower *= -1;
       }
 
-      const battPowerRegs = raw.battPower;
+      const battPowerRegs = rawSlice("battPower", 2);
       const batteryDcPower = this.regsToFloat32LittleWord(battPowerRegs[0], battPowerRegs[1]);
 
-      const battEnergyMaxRegs = raw.battEnergyMax;
+      const battEnergyMaxRegs = rawSlice("battEnergyMax", 2);
       const batteryEnergyMax = this.regsToFloat32LittleWord(battEnergyMaxRegs[0], battEnergyMaxRegs[1]);
 
-      const battSocRegs = raw.battSoc;
+      const battSocRegs = rawSlice("battSoc", 2);
       const batterySoc = this.regsToFloat32LittleWord(battSocRegs[0], battSocRegs[1]);
       let batteryEnergyAvailable = null;
 
-
-      const batteryOperatingStateRaw = raw.battOperatingState
-        ? this.regsToUInt32WordSwap(raw.battOperatingState[0], raw.battOperatingState[1])
-        : null;
+      const battOperatingStateRegs = rawSlice("battOperatingState", 2);
+      const batteryOperatingStateRaw = this.regsToUInt32WordSwap(
+        battOperatingStateRegs[0],
+        battOperatingStateRegs[1],
+      );
       const batteryOperatingState = BATTERY_OPERATING_STATE_VALUES.includes(batteryOperatingStateRaw)
         ? batteryOperatingStateRaw
         : null;
@@ -775,6 +828,12 @@ class Solaredgemodbus extends utils.Adapter {
       await this.setNumberState("Grid_Leistung", gridPower, 1);
       await this.setConnectionStatus(true);
     } catch (err) {
+      if (String(err.message || "").startsWith("Fatal register config error:")) {
+        this.log.error(err.message);
+        await this.setConnectionStatus(false);
+        this.terminate(err.message);
+        return;
+      }
       this.log.warn(`Polling failed: ${err.message}`);
       await this.setConnectionStatus(false);
       if (this.client.isOpen) {
