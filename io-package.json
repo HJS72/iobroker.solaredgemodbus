@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "solaredgemodbus",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "titleLang": {
       "en": "SolarEdge Modbus",
       "de": "SolarEdge Modbus"
@@ -64,7 +64,7 @@
       "batteryDcPower": 102837,
       "batteryEnergyMax": 102787,
       "batterySoc": 102853,
-      "batteryOperatingState": 102855
+      "batteryOperatingState": 103237
     }
   },
   "objects": [],

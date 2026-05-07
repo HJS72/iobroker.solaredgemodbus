@@ -38,7 +38,7 @@ Hinweis: Register sind in der Admin-Seite komplett konfigurierbar.
 | Battery DC Power | float32 (little-word) | 102837 |
 | Battery Energy Max | float32 (little-word) | 102787 |
 | Battery SOC | float32 (little-word) | 102853 |
-| Battery Operating State | uint32 (word-swap) | 102855 |
+| Battery Operating State / Storage Control Mode | uint16 | 103237 |
 
 ## Formeln
 
@@ -137,11 +137,11 @@ Falls Adressen falsch waren:
 3. Adapter in ioBroker neu starten.
 4. Log-Zeilen neu prüfen.
 
-## Battery Operating Mode (Register 102855)
+## Battery Operating Mode (Register 103237)
 
 - Der Datenpunkt `Batterie_Betriebsmodus` ist les- und schreibbar.
-- Register-Adresse: `registers.batteryOperatingState` (Default `102855`).
-- Kodierung: `unsigned32`, `big-endian`, `word-swap`.
+- Register-Adresse: `registers.batteryOperatingState` (Default `103237`).
+- Kodierung: `uint16`.
 - Zulaessige Werte:
   - `0` Disabled (Speicherkontrolle deaktiviert)
   - `1` Maximize Self Consumption (Eigenverbrauch optimieren – Standard)

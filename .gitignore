@@ -1,4 +1,6 @@
 node_modules/
+tools/
+*.tgz
 
 # OS/editor noise
 .DS_Store

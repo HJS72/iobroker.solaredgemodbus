@@ -148,7 +148,7 @@
 
         "registers.batteryOperatingState": {
           "type": "number",
-          "label": "Battery Operating State (uint32 word-swap)",
+          "label": "Storage Control Mode (uint16)",
           "xs": 12,
           "sm": 4,
           "md": 3

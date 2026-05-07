@@ -8,7 +8,7 @@ const SUNSPEC_SF_MAX = 10;
 const SUNSPEC_NOT_IMPL_INT16 = -32768;
 const SUNSPEC_NOT_IMPL_UINT32 = 0xffffffff;
 const REMOVED_STATES = ["Solaredge_Energie_Gesamt"];
-const BATTERY_OPERATING_STATE_VALUES = [0, 1, 2, 4];
+const BATTERY_STORAGE_MODE_VALUES = [0, 1, 2, 4];
 
 const STATES = [
   { id: "Modbus_Status", role: "indicator.connected", type: "boolean" },
@@ -57,7 +57,6 @@ class Solaredgemodbus extends utils.Adapter {
       lastPvPower: null,
     };
     this.formulaWarnings = new Set();
-    this.invalidBatteryOperatingStateAddressWarned = false;
     this.legacyAddressWarnings = new Set();
     this.diagnosticWarnings = new Set();
     // Circuit-breaker: tracks consecutive timeouts per register block
@@ -156,12 +155,12 @@ class Solaredgemodbus extends utils.Adapter {
     return null;
   }
 
-  normalizeBatteryOperatingState(value) {
+  normalizeBatteryStorageMode(value) {
     if (!Number.isFinite(value)) {
       return null;
     }
     const state = Math.trunc(value);
-    return BATTERY_OPERATING_STATE_VALUES.includes(state) ? state : null;
+    return BATTERY_STORAGE_MODE_VALUES.includes(state) ? state : null;
   }
 
   warnOnce(key, message, level = "warn") {
@@ -220,7 +219,7 @@ class Solaredgemodbus extends utils.Adapter {
       );
       return;
     }
-    const writeValue = this.normalizeBatteryOperatingState(Number(state.val));
+    const writeValue = this.normalizeBatteryStorageMode(Number(state.val));
     if (writeValue === null) {
       this.log.warn(`Batterie_Betriebsmodus write ignored: invalid value ${state.val}`);
       return;
@@ -228,10 +227,7 @@ class Solaredgemodbus extends utils.Adapter {
 
     try {
       await this.ensureConnected();
-      // uint32 big-endian word-swap: low word first, high word second.
-      const lowWord = writeValue & 0xffff;
-      const highWord = (writeValue >>> 16) & 0xffff;
-      await this.client.writeRegisters(this.toOffset(registerAddress), [lowWord, highWord]);
+      await this.client.writeRegister(this.toOffset(registerAddress), writeValue & 0xffff);
       await this.setStateAsync("Batterie_Betriebsmodus", { val: writeValue, ack: true });
       await this.setConnectionStatus(true);
       this.log.info(`Wrote register ${registerAddress} with value ${writeValue}`);
@@ -413,13 +409,8 @@ class Solaredgemodbus extends utils.Adapter {
       "batteryOperatingState(read)",
     );
     if (Number.isFinite(batteryOperatingStateAbsoluteAddress)) {
-      defs.push({ key: "battOperatingState", address: batteryOperatingStateAbsoluteAddress, len: 2 });
-      this.invalidBatteryOperatingStateAddressWarned = false;
-    } else if (
-      Number.isFinite(batteryOperatingStateAddress) &&
-      !this.invalidBatteryOperatingStateAddressWarned
-    ) {
-      this.invalidBatteryOperatingStateAddressWarned = true;
+      defs.push({ key: "batteryOperatingState", address: batteryOperatingStateAbsoluteAddress, len: 1 });
+    } else if (Number.isFinite(batteryOperatingStateAddress)) {
       this.log.warn(
         `Skipping Batterie_Betriebsmodus read: invalid register address ${batteryOperatingStateAddress}`,
       );
@@ -622,12 +613,9 @@ class Solaredgemodbus extends utils.Adapter {
       const batterySoc = this.regsToFloat32LittleWord(battSocRegs[0], battSocRegs[1]);
       let batteryEnergyAvailable = null;
 
-      const battOperatingStateRegs = rawSlice("battOperatingState", 2);
-      const batteryOperatingStateRaw = this.regsToUInt32WordSwap(
-        battOperatingStateRegs[0],
-        battOperatingStateRegs[1],
-      );
-      const batteryOperatingState = BATTERY_OPERATING_STATE_VALUES.includes(batteryOperatingStateRaw)
+      const batteryOperatingStateRegs = rawSlice("batteryOperatingState", 1);
+      const batteryOperatingStateRaw = batteryOperatingStateRegs[0];
+      const batteryStorageMode = BATTERY_STORAGE_MODE_VALUES.includes(batteryOperatingStateRaw)
         ? batteryOperatingStateRaw
         : null;
 
@@ -816,7 +804,7 @@ class Solaredgemodbus extends utils.Adapter {
       await this.setNumberState("Batterie_SOC_min", batterySocMin, 1);
       await this.setNumberState("Batterie_Time", batteryTime, 2);
       await this.setStringState("Batterie_Uhrzeit", batteryTargetClock);
-      await this.setNumberState("Batterie_Betriebsmodus", batteryOperatingState, 0);
+      await this.setNumberState("Batterie_Betriebsmodus", batteryStorageMode, 0);
 
       await this.setNumberState("PV_Leistung", pvPowerOut, 1);
       await this.setNumberState("PV_Energie_Gesamt", pvEnergyTotal, 1);
