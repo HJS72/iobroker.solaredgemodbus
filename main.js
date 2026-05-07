@@ -488,6 +488,7 @@ class Solaredgemodbus extends utils.Adapter {
     const CIRCUIT_BREAK_AFTER = 3;
     const CIRCUIT_BREAK_MS = 5 * 60 * 1000; // 5 minutes
     const FATAL_ERROR_AFTER = 10;
+    const OPTIONAL_BLOCK_QUARANTINE_MS = 24 * 60 * 60 * 1000; // 24 hours
     const readIntervalMs = Math.max(0, Number(this.config.readIntervalMs) || 150);
     const readRetryCount = Math.max(0, Math.min(10, Math.floor(Number(this.config.readRetryCount) || 1)));
     const now = Date.now();
@@ -536,13 +537,23 @@ class Solaredgemodbus extends utils.Adapter {
         const err = lastErr;
         const prev = this.registerCircuitBreaker.get(group.start) || { consecutiveErrors: 0, skipUntil: 0 };
         const next = { consecutiveErrors: prev.consecutiveErrors + 1, skipUntil: 0 };
+        const isOptionalBatteryOnlyGroup = group.items.every((item) =>
+          ["battPower", "battEnergyMax", "battSoc", "batteryOperatingState"].includes(item.key),
+        );
 
-        if (next.consecutiveErrors >= FATAL_ERROR_AFTER) {
+        if (next.consecutiveErrors >= FATAL_ERROR_AFTER && !isOptionalBatteryOnlyGroup) {
           const itemList = group.items.map((i) => `${i.key}(${i.address})`).join(", ");
           this.registerCircuitBreaker.set(group.start, next);
           throw new Error(
             `Fatal register config error: block ${group.start}-${group.end} (${itemList}) unreachable after ` +
               `${FATAL_ERROR_AFTER} attempts (${err.message})`,
+          );
+        } else if (next.consecutiveErrors >= FATAL_ERROR_AFTER && isOptionalBatteryOnlyGroup) {
+          next.skipUntil = now + OPTIONAL_BLOCK_QUARANTINE_MS;
+          const itemList = group.items.map((i) => `${i.key}(${i.address})`).join(", ");
+          this.log.warn(
+            `Optional battery block ${group.start}-${group.end} (${itemList}) unreachable after ${FATAL_ERROR_AFTER} attempts ` +
+              `(${err.message}). Disabling this block for 24h.`,
           );
         } else if (next.consecutiveErrors >= CIRCUIT_BREAK_AFTER) {
           next.skipUntil = now + CIRCUIT_BREAK_MS;
