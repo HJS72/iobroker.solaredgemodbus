@@ -35,8 +35,6 @@ Hinweis: Register sind in der Admin-Seite komplett konfigurierbar.
 | Battery DC Power | float32 (little-word) | 57716 |
 | Battery Energy Max | float32 (little-word) | 57726 |
 | Battery SOC | float32 (little-word) | 57732 |
-| Battery Export Energy | uint64 | 57718 |
-| Battery Import Energy | uint64 | 57722 |
 | Battery SOC Min (optional) | float32 (little-word) | 0 (deaktiviert) |
 
 ## Formeln
@@ -61,8 +59,6 @@ Verfuegbare Variablen (Auszug):
 - batteryEnergyMax
 - batteryEnergyAvailable (berechnet aus batteryEnergyMax * max(0, batterySoc - batterySocMin) / 100)
 - batterySoc
-- batteryImportEnergyWh
-- batteryExportEnergyWh
 - batteryAcEfficiency
 
 Bei ungueltiger Formel faellt der Adapter automatisch auf die Standardformel zurueck.

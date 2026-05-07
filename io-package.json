@@ -64,8 +64,6 @@
       "batteryDcPower": 57716,
       "batteryEnergyMax": 57726,
       "batterySoc": 57732,
-      "batteryImportEnergyWh": 57722,
-      "batteryExportEnergyWh": 57718,
       "batteryOperatingState": 103237
     }
   },

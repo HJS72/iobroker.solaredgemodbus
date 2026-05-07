@@ -371,8 +371,6 @@ class Solaredgemodbus extends utils.Adapter {
       { key: "battPower", address: registers.batteryDcPower, len: 2 },
       { key: "battEnergyMax", address: registers.batteryEnergyMax, len: 2 },
       { key: "battSoc", address: registers.batterySoc, len: 2 },
-      { key: "battImport", address: registers.batteryImportEnergyWh, len: 4 },
-      { key: "battExport", address: registers.batteryExportEnergyWh, len: 4 },
     ];
 
     const batteryOperatingStateAddress = Number(
@@ -564,8 +562,7 @@ class Solaredgemodbus extends utils.Adapter {
       const batterySoc = this.regsToFloat32LittleWord(battSocRegs[0], battSocRegs[1]);
       let batteryEnergyAvailable = null;
 
-      const batteryImportEnergyWh = raw.battImport ? this.regsToUInt64From4(raw.battImport) : null;
-      const batteryExportEnergyWh = raw.battExport ? this.regsToUInt64From4(raw.battExport) : null;
+
       const batteryOperatingStateRaw = raw.battOperatingState
         ? this.regsToUInt32WordSwap(raw.battOperatingState[0], raw.battOperatingState[1])
         : null;
@@ -586,8 +583,6 @@ class Solaredgemodbus extends utils.Adapter {
         batteryEnergyMax,
         batteryEnergyAvailable,
         batterySoc,
-        batteryImportEnergyWh,
-        batteryExportEnergyWh,
         batteryAcEfficiency: efficiency,
       };
 

@@ -265,8 +265,6 @@ function buildDefs(registers) {
     { key: "battEnergyMax", address: registers.batteryEnergyMax, len: 2 },
     { key: "battEnergyAvail", address: registers.batteryEnergyAvailable, len: 2 },
     { key: "battSoc", address: registers.batterySoc, len: 2 },
-    { key: "battImport", address: registers.batteryImportEnergyWh, len: 4 },
-    { key: "battExport", address: registers.batteryExportEnergyWh, len: 4 },
   ];
 
   if (Number(registers.batterySocMin) > 0) {
@@ -358,8 +356,7 @@ async function readLocal() {
   const batterySocMin = raw.battSocMin
     ? regsToFloat32LittleWord(raw.battSocMin[0], raw.battSocMin[1])
     : null;
-  const batteryImportEnergyWh = regsToUInt64From4(raw.battImport);
-  const batteryExportEnergyWh = regsToUInt64From4(raw.battExport);
+
 
   const batteryAcEfficiency = Number(cfg.modbus.batteryAcEfficiency) || 0.96;
   const formulas = cfg.modbus.formulas || {};
@@ -372,8 +369,6 @@ async function readLocal() {
     batteryEnergyAvailable,
     batterySoc,
     batterySocMin,
-    batteryImportEnergyWh,
-    batteryExportEnergyWh,
     batteryAcEfficiency,
   };
 
@@ -410,8 +405,6 @@ async function readLocal() {
     Solaredge_Energie_Tag: solaredgeEnergyTag,
     Solaredge_Leistung: solaredgePower,
     Grid_Leistung: gridPower,
-    batteryImportEnergyWh,
-    batteryExportEnergyWh,
   };
 }
 

@@ -145,20 +145,7 @@
           "sm": 4,
           "md": 3
         },
-        "registers.batteryImportEnergyWh": {
-          "type": "number",
-          "label": "Battery Import Energy (uint64)",
-          "xs": 12,
-          "sm": 4,
-          "md": 3
-        },
-        "registers.batteryExportEnergyWh": {
-          "type": "number",
-          "label": "Battery Export Energy (uint64)",
-          "xs": 12,
-          "sm": 4,
-          "md": 3
-        },
+
         "registers.batteryOperatingState": {
           "type": "number",
           "label": "Battery Operating State (uint32 word-swap)",
