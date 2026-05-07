@@ -1,11 +1,5 @@
 node_modules/
 
-# local runtime outputs
-tools/output/
-
-# local credentials/config
-tools/testwrapper.config.json
-
 # OS/editor noise
 .DS_Store
 .vscode/

@@ -1,17 +1,13 @@
 {
   "name": "iobroker.solaredgemodbus",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ioBroker adapter for SolarEdge Modbus values with scale factors and derived datapoints",
   "author": "SSPANNI",
   "license": "MIT",
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
-    "check": "node --check main.js",
-    "test:wrapper": "node tools/test-wrapper.js",
-    "dashboard": "node tools/dashboard/server.js",
-    "scan:unit": "node tools/find-unit-id.js",
-    "go": "node tools/run-all.js"
+    "check": "node --check main.js"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.3.2",

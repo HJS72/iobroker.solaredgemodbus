@@ -1,6 +1,6 @@
 # ioBroker SolarEdge Modbus Adapter (Custom)
 
-![SolarEdge Modbus Icon](admin/solaredgemodbus-new.png)
+![SolarEdge Modbus Icon](admin/solaredgemodbus.png)
 
 Dieser Adapter liest SolarEdge Modbus Register, rechnet Scale Factors um und legt die gewuenschten Datenpunkte in ioBroker an.
 
@@ -118,7 +118,7 @@ Starte den Adapter neu und schaue in den Logs nach:
 
 **Zeile 1 - Konfigurierte Register (beim Start geloggt):**
 ```
-Configured Modbus register plan: inverterAcPower=40083 (absolute 40083, offset 82), ...
+Configured Modbus register plan: inverterAcPower=40084 (absolute 40084, offset 83), ...
 ```
 Wenn hier andere Adressen stehen als oben aufgelistet, sind sie falsch in Admin konfiguriert.
 
@@ -137,10 +137,10 @@ Falls Adressen falsch waren:
 3. Adapter in ioBroker neu starten.
 4. Log-Zeilen neu prüfen.
 
-## Battery Operating Mode (Register 103237)
+## Battery Operating Mode (Register 102855)
 
 - Der Datenpunkt `Batterie_Betriebsmodus` ist les- und schreibbar.
-- Register-Adresse: `registers.batteryOperatingState` (Default `103237`).
+- Register-Adresse: `registers.batteryOperatingState` (Default `102855`).
 - Kodierung: `unsigned32`, `big-endian`, `word-swap`.
 - Zulaessige Werte:
   - `0` Disabled (Speicherkontrolle deaktiviert)
@@ -148,51 +148,6 @@ Falls Adressen falsch waren:
   - `2` Remote Control (Fernsteuerung)
   - `4` Remote Control (Alternativer Steuermodus)
 - Bei `ack=false` schreibt der Adapter den Modus auf den Wechselrichter.
-
-## Testwrapper (lokal + SolarEdge Cloud Vergleich)
-
-Es gibt einen Wrapper fuer Vergleichslauf lokal gegen Cloud:
-
-1. Beispiel kopieren:
-
-```bash
-cp tools/testwrapper.config.example.json tools/testwrapper.config.json
-```
-
-2. `tools/testwrapper.config.json` mit Site-ID und API-Key fuellen.
-
-3. Starten:
-
-```bash
-npm run test:wrapper
-```
-
-Output:
-
-- Konsolen-Tabelle mit lokalen Werten, Cloud-Werten und Delta
-- Snapshot-Datei: `tools/output/compare-latest.json`
-- Historie als JSON: `tools/output/compare-history.json`
-- Historie als NDJSON: `tools/output/compare-history.ndjson`
-
-## Dashboard
-
-Lokales Dashboard fuer Verlauf und Delta-Werte:
-
-1. Wrapper laufen lassen (damit Daten in `tools/output` geschrieben werden)
-2. Dashboard starten:
-
-```bash
-npm run dashboard
-```
-
-3. Browser oeffnen:
-
-http://localhost:8099
-
-Hinweis zum "Adapter starten":
-
-- Der Wrapper kann optional parallel einen Prozess starten (`adapter.enabled` + `adapter.command`).
-- Ein echter ioBroker-Adapterlauf braucht dennoch eine laufende ioBroker-Umgebung/js-controller.
 
 ## Start
 
