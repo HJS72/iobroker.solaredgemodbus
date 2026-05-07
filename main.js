@@ -213,17 +213,26 @@ class Solaredgemodbus extends utils.Adapter {
   }
 
   async onStateChange(id, state) {
+    this.log.debug(`onStateChange: id=${id}, state.val=${state?.val}, state.ack=${state?.ack}`);
+    
     if (!state || state.ack) {
+      this.log.debug(`onStateChange skipped: no state or ack=true`);
       return;
     }
 
-    if (!id.endsWith(".Batterie_Betriebsmodus")) {
+    const fullId = `${this.namespace}.Batterie_Betriebsmodus`;
+    if (id !== fullId && !id.endsWith(".Batterie_Betriebsmodus")) {
+      this.log.debug(`onStateChange skipped: not Batterie_Betriebsmodus (id=${id}, expected=${fullId})`);
       return;
     }
 
+    this.log.info(`Batterie_Betriebsmodus change detected: value=${state.val}`);
     const configuredRegisterAddress = Number(
       this.config.registers?.batteryOperatingState ?? this.config.registers?.write103237,
     ) || 103237;
+    this.log.debug(
+      `Register config: batteryOperatingState=${this.config.registers?.batteryOperatingState}, write103237=${this.config.registers?.write103237}, resolved=${configuredRegisterAddress}`,
+    );
     const registerAddress = this.resolveAbsoluteAddress(
       configuredRegisterAddress,
       "batteryOperatingState(write)",
@@ -236,9 +245,12 @@ class Solaredgemodbus extends utils.Adapter {
     }
     const writeValue = this.normalizeBatteryStorageMode(Number(state.val));
     if (writeValue === null) {
-      this.log.warn(`Batterie_Betriebsmodus write ignored: invalid value ${state.val}`);
+      this.log.warn(
+        `Batterie_Betriebsmodus write ignored: invalid value ${state.val} (allowed: ${BATTERY_STORAGE_MODE_VALUES.join(", ")})`,
+      );
       return;
     }
+    this.log.debug(`Writing normalized value: ${state.val} -> ${writeValue}`);
 
     try {
       await this.ensureConnected();
@@ -247,14 +259,22 @@ class Solaredgemodbus extends utils.Adapter {
       if (elapsedSinceLastWrite < writeIntervalMs) {
         await this.waitMs(writeIntervalMs - elapsedSinceLastWrite);
       }
-      await this.client.writeRegister(this.toOffset(registerAddress), writeValue & 0xffff);
+      const offset = this.toOffset(registerAddress);
+      this.log.debug(
+        `Writing Batterie_Betriebsmodus: registerAddress=${registerAddress}, offset=${offset}, value=${writeValue} (normalized from ${state.val})`,
+      );
+      const writeResult = await this.client.writeRegister(offset, writeValue & 0xffff);
+      this.log.debug(`Write result for register ${registerAddress}: ${JSON.stringify(writeResult)}`);
       this.lastWriteTs = Date.now();
       await this.setStateAsync("Batterie_Betriebsmodus", { val: writeValue, ack: true });
       await this.setConnectionStatus(true);
       this.log.info(`Wrote register ${registerAddress} with value ${writeValue}`);
     } catch (err) {
-      this.log.warn(`Write to register ${registerAddress} failed: ${err.message}`);
+      this.log.error(
+        `Write to register ${registerAddress} failed: ${err.message}\nStack: ${err.stack}`,
+      );
       await this.setConnectionStatus(false);
+      throw err;
     }
   }
 
