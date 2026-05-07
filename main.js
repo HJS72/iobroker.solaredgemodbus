@@ -280,10 +280,9 @@ class Solaredgemodbus extends utils.Adapter {
       this.log.info(`Wrote register ${registerAddress} with value ${writeValue}`);
     } catch (err) {
       this.log.error(
-        `Write to register ${registerAddress} failed: ${err.message}\nStack: ${err.stack}`,
+        `Write to register ${registerAddress} failed: ${err.message}`,
       );
       await this.setConnectionStatus(false);
-      throw err;
     }
   }
 
@@ -897,7 +896,7 @@ class Solaredgemodbus extends utils.Adapter {
         },
         batteryTime,
       );
-      const batteryTargetClock = this.calcBatteryTargetClock(
+      let batteryTargetClock = this.calcBatteryTargetClock(
         batterySocOut,
         batteryAcPower,
         batterySocMin,
