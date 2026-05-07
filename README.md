@@ -97,6 +97,43 @@ Bei ungueltiger Formel faellt der Adapter automatisch auf die Standardformel zur
 - Legacy-Eintraege mit zero-based Adressen werden automatisch nach absolut konvertiert (z. B. `15` -> `40016`) und einmalig als Warnung geloggt.
 - Register werden gebuendelt (Batch-Reads) gelesen, um deutlich weniger Modbus-Requests zu erzeugen.
 
+## Troubleshooting: Leistungs- und Energiewerte sind leer
+
+Wenn `Solaredge_Leistung`, `Solaredge_Energie_Tag`, `PV_Leistung` oder `PV_Energie_Tag` keinen Wert zeigen, prüfe:
+
+### 1. Register-Adressen in ioBroker Admin korrekt?
+
+In der Admin-Seite unter Tab `Registers` müssen die Inverter-Register genau so konfiguriert sein:
+- Inverter AC Power: **40083** (nicht 40085 oder ähnlich)
+- Inverter AC Power SF: **40084** (nicht 40086)
+- Inverter AC Energy WH: **40094** (nicht 40095)
+- Inverter AC Energy WH SF: **40096** (nicht 40097)
+
+### 2. Adapter-Log prüfen
+
+Starte den Adapter neu und schaue in den Logs nach:
+
+**Zeile 1 - Konfigurierte Register (beim Start geloggt):**
+```
+Configured Modbus register plan: inverterAcPower=40083 (absolute 40083, offset 82), ...
+```
+Wenn hier andere Adressen stehen als oben aufgelistet, sind sie falsch in Admin konfiguriert.
+
+**Zeile 2 - Diagnostik bei fehlenden Werten:**
+```
+Solaredge_Leistung unresolved: inverterAcPower register=..., ..., sf=...
+```
+- Wenn `sf` außerhalb von -10..10 liegt (z.B. `sf=5000`, `sf=8283`), liegt ein Register-Adress-Fehler vor.
+- Wenn `sf` im gültigen Bereich ist aber `raw=-1`, existiert das Register am Wechselrichter nicht.
+
+### 3. Adresse aktualisieren und Adapter neu starten
+
+Falls Adressen falsch waren:
+1. In Admin die korrekten Adressen setzen.
+2. Speichern.
+3. Adapter in ioBroker neu starten.
+4. Log-Zeilen neu prüfen.
+
 ## Battery Operating Mode (Register 103237)
 
 - Der Datenpunkt `Batterie_Betriebsmodus` ist les- und schreibbar.
