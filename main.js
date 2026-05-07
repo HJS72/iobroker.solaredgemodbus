@@ -274,10 +274,14 @@ class Solaredgemodbus extends utils.Adapter {
       );
       const writeResult = await this.client.writeRegister(offset, writeValue & 0xffff);
       this.log.debug(`Write result for register ${registerAddress}: ${JSON.stringify(writeResult)}`);
+      
+      // Give device time to process the register write (important!)
+      await this.waitMs(1000);
+      
       this.lastWriteTs = Date.now();
       await this.setStateAsync("Batterie_Betriebsmodus", { val: writeValue, ack: true });
       await this.setConnectionStatus(true);
-      this.log.info(`Wrote register ${registerAddress} with value ${writeValue}`);
+      this.log.info(`Wrote register ${registerAddress} with value ${writeValue} (ack after 1s delay)`);
     } catch (err) {
       this.log.error(
         `Write to register ${registerAddress} failed: ${err.message}`,
