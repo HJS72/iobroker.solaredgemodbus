@@ -38,7 +38,7 @@
     "host": "192.168.178.50",
     "port": 1502,
     "unitId": 1,
-    "pollIntervalSec": 10,
+    "pollIntervalSec": 1,
     "batterySocMin": 0,
     "invertGridPowerSign": false,
     "batteryAcEfficiency": 0.96,

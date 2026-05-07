@@ -77,7 +77,7 @@ class Solaredgemodbus extends utils.Adapter {
     await this.cleanupRemovedStates();
     await this.setConnectionStatus(false);
     await this.pollOnce();
-    const intervalSec = Math.max(2, Number(this.config.pollIntervalSec) || 10);
+    const intervalSec = Math.max(1, Number(this.config.pollIntervalSec) || 1);
     this.pollTimer = setInterval(() => {
       this.pollOnce().catch((err) => this.log.warn(`pollOnce failed: ${err.message}`));
     }, intervalSec * 1000);
