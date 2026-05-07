@@ -349,9 +349,11 @@ class Solaredgemodbus extends utils.Adapter {
     }
 
     let deltaSoc = 0;
-    if (batteryAcPower < 0) {
+    if (batteryAcPower > 0) {
+      // Positive power = charging
       deltaSoc = 100 - batterySoc;
     } else {
+      // Negative power = discharging
       const socMin = Number.isFinite(batterySocMin) ? batterySocMin : 0;
       deltaSoc = batterySoc - socMin;
     }
