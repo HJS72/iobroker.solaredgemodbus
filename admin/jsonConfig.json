@@ -42,23 +42,6 @@
           "sm": 3,
           "md": 2
         },
-        "addressMode": {
-          "type": "select",
-          "label": "Address mode",
-          "options": [
-            {
-              "label": "Absolute (40001 based)",
-              "value": "absolute40001"
-            },
-            {
-              "label": "Zero based",
-              "value": "zeroBased"
-            }
-          ],
-          "xs": 12,
-          "sm": 4,
-          "md": 3
-        },
         "invertGridPowerSign": {
           "type": "checkbox",
           "label": "Invert grid power sign",

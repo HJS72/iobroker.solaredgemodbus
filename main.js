@@ -61,6 +61,7 @@ class Solaredgemodbus extends utils.Adapter {
     };
     this.formulaWarnings = new Set();
     this.invalidBatteryOperatingStateAddressWarned = false;
+    this.legacyAddressWarnings = new Set();
 
     this.on("ready", this.onReady.bind(this));
     this.on("unload", this.onUnload.bind(this));
@@ -126,12 +127,30 @@ class Solaredgemodbus extends utils.Adapter {
     });
   }
 
-  isAddressUsable(address) {
-    if (!Number.isFinite(address)) {
-      return false;
+  resolveAbsoluteAddress(address, registerName = "register") {
+    const value = Number(address);
+    if (!Number.isFinite(value)) {
+      return null;
     }
-    const mode = this.config.addressMode || "absolute40001";
-    return mode === "zeroBased" ? address >= 0 : address >= 40001;
+
+    const intValue = Math.trunc(value);
+    if (intValue >= 40001) {
+      return intValue;
+    }
+
+    if (intValue >= 0) {
+      const absolute = intValue + 40001;
+      const warningKey = `${registerName}:${intValue}`;
+      if (!this.legacyAddressWarnings.has(warningKey)) {
+        this.legacyAddressWarnings.add(warningKey);
+        this.log.warn(
+          `Legacy zero-based address detected for ${registerName}: ${intValue}. Auto-converted to absolute ${absolute}.`,
+        );
+      }
+      return absolute;
+    }
+
+    return null;
   }
 
   normalizeBatteryOperatingState(value) {
@@ -151,12 +170,16 @@ class Solaredgemodbus extends utils.Adapter {
       return;
     }
 
-    const registerAddress = Number(
+    const configuredRegisterAddress = Number(
       this.config.registers?.batteryOperatingState ?? this.config.registers?.write103237,
     ) || 103237;
-    if (!this.isAddressUsable(registerAddress)) {
+    const registerAddress = this.resolveAbsoluteAddress(
+      configuredRegisterAddress,
+      "batteryOperatingState(write)",
+    );
+    if (!Number.isFinite(registerAddress)) {
       this.log.warn(
-        `Batterie_Betriebszustand write skipped: address ${registerAddress} invalid for addressMode ${this.config.addressMode || "absolute40001"}`,
+        `Batterie_Betriebszustand write skipped: invalid register address ${configuredRegisterAddress}`,
       );
       return;
     }
@@ -192,20 +215,12 @@ class Solaredgemodbus extends utils.Adapter {
   }
 
   toOffset(address) {
-    const value = Number(address);
-    if (!Number.isFinite(value)) {
+    const absoluteAddress = this.resolveAbsoluteAddress(address);
+    if (!Number.isFinite(absoluteAddress)) {
       throw new Error(`Invalid address: ${address}`);
     }
 
-    if ((this.config.addressMode || "absolute40001") === "zeroBased") {
-      return value;
-    }
-
-    if (value < 40001) {
-      throw new Error(`Absolute address ${value} is below 40001`);
-    }
-
-    return value - 40001;
+    return absoluteAddress - 40001;
   }
 
   round(value, decimals) {
@@ -359,8 +374,12 @@ class Solaredgemodbus extends utils.Adapter {
     const batteryOperatingStateAddress = Number(
       registers.batteryOperatingState ?? registers.write103237,
     );
-    if (this.isAddressUsable(batteryOperatingStateAddress)) {
-      defs.push({ key: "battOperatingState", address: batteryOperatingStateAddress, len: 2 });
+    const batteryOperatingStateAbsoluteAddress = this.resolveAbsoluteAddress(
+      batteryOperatingStateAddress,
+      "batteryOperatingState(read)",
+    );
+    if (Number.isFinite(batteryOperatingStateAbsoluteAddress)) {
+      defs.push({ key: "battOperatingState", address: batteryOperatingStateAbsoluteAddress, len: 2 });
       this.invalidBatteryOperatingStateAddressWarned = false;
     } else if (
       Number.isFinite(batteryOperatingStateAddress) &&
@@ -368,7 +387,7 @@ class Solaredgemodbus extends utils.Adapter {
     ) {
       this.invalidBatteryOperatingStateAddressWarned = true;
       this.log.warn(
-        `Skipping Batterie_Betriebszustand read: address ${batteryOperatingStateAddress} invalid for addressMode ${this.config.addressMode || "absolute40001"}`,
+        `Skipping Batterie_Betriebszustand read: invalid register address ${batteryOperatingStateAddress}`,
       );
     }
 

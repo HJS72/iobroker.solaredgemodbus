@@ -39,7 +39,6 @@
     "port": 1502,
     "unitId": 1,
     "pollIntervalSec": 10,
-    "addressMode": "absolute40001",
     "invertGridPowerSign": false,
     "batteryAcEfficiency": 0.96,
     "formulas": {

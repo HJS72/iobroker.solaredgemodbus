@@ -99,7 +99,8 @@ Bei ungueltiger Formel faellt der Adapter automatisch auf die Standardformel zur
 - Alle geforderten Leistungs-Datenpunkte werden als AC abgelegt.
 - Batterie-Leistung ist ohne explizites AC-Batterieregister eine Naeherung aus DC-Leistung * Wirkungsgrad.
 - Je nach Firmware/Geraet koennen Adress-Offsets variieren. Deshalb sind alle Register in Admin einstellbar.
-- Address mode `absolute40001` bedeutet: 40001-basierte Modbus-Adressen (Standard in vielen Dokus).
+- Register werden als absolute 40001-basierte Modbus-Adressen behandelt (Standard in vielen Dokus).
+- Legacy-Eintraege mit zero-based Adressen werden automatisch nach absolut konvertiert (z. B. `15` -> `40016`) und einmalig als Warnung geloggt.
 - Register werden gebuendelt (Batch-Reads) gelesen, um deutlich weniger Modbus-Requests zu erzeugen.
 
 ## Battery Operating State (Register 103237)
