@@ -1,0 +1,77 @@
+{
+  "common": {
+    "name": "solaredgemodbus",
+    "version": "0.0.1",
+    "titleLang": {
+      "en": "SolarEdge Modbus",
+      "de": "SolarEdge Modbus"
+    },
+    "desc": {
+      "en": "Reads SolarEdge Modbus registers, applies scale factors and creates derived datapoints",
+      "de": "Liest SolarEdge-Modbus-Register, verrechnet Skalierungsfaktoren und erzeugt berechnete Datenpunkte"
+    },
+    "authors": [
+      "SSPANNI"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "mode": "daemon",
+    "type": "energy",
+    "icon": "solaredgemodbus.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/SSPANNI/iobroker.solaredgemodbus/main/admin/solaredgemodbus.png",
+    "readme": "https://github.com/SSPANNI/iobroker.solaredgemodbus/blob/main/README.md",
+    "loglevel": "info",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.19"
+      }
+    ]
+  },
+  "native": {
+    "host": "192.168.178.50",
+    "port": 1502,
+    "unitId": 1,
+    "pollIntervalSec": 10,
+    "addressMode": "absolute40001",
+    "invertGridPowerSign": false,
+    "batteryAcEfficiency": 0.96,
+    "formulas": {
+      "Batterie_Energie_max": "batteryEnergyMax",
+      "Batterie_Leistung": "batteryDcPower * batteryAcEfficiency",
+      "Batterie_SOC": "batterySoc",
+      "Batterie_SOC_min": "batterySocMin",
+      "Batterie_Time": "batteryAcPower > 0 ? batteryEnergyAvailable / batteryAcPower : (batteryAcPower < 0 ? (batteryEnergyMaxOut - batteryEnergyAvailable) / Math.abs(batteryAcPower) : null)",
+      "PV_Leistung": "solaredgePower === null || batteryAcPower === null ? solaredgePower : (batteryAcPower > 0 ? solaredgePower + batteryAcPower : solaredgePower - Math.abs(batteryAcPower))",
+      "PV_Energie_Gesamt": "inverterEnergyWh",
+      "PV_Energie_Tag": "",
+      "Solaredge_Leistung": "inverterAcPower",
+      "Solaredge_Energie_Tag": "",
+      "Grid_Leistung": "gridPower"
+    },
+    "registers": {
+      "inverterAcPower": 40083,
+      "inverterAcPowerSf": 40084,
+      "inverterAcEnergyWh": 40094,
+      "inverterAcEnergyWhSf": 40096,
+      "meterAcPower": 40207,
+      "meterAcPowerSf": 40211,
+      "batteryDcPower": 57716,
+      "batteryEnergyMax": 57726,
+      "batteryEnergyAvailable": 57728,
+      "batterySoc": 57732,
+      "batteryImportEnergyWh": 57722,
+      "batteryExportEnergyWh": 57718,
+      "batterySocMin": 0,
+      "batteryOperatingState": 103237
+    }
+  },
+  "objects": [],
+  "instanceObjects": []
+}

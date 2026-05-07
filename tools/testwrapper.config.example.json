@@ -1,0 +1,45 @@
+{
+  "pollIntervalSec": 30,
+  "historyKeep": 500,
+  "adapter": {
+    "enabled": false,
+    "command": "npm run start",
+    "cwd": "."
+  },
+  "modbus": {
+    "host": "192.168.178.50",
+    "port": 1502,
+    "unitId": 1,
+    "addressMode": "absolute40001",
+    "invertGridPowerSign": false,
+    "batteryAcEfficiency": 0.96,
+    "formulas": {
+      "Batterie_Leistung": "batteryDcPower * batteryAcEfficiency",
+      "PV_Leistung": "solaredgePower === null || batteryPower === null ? solaredgePower : (batteryPower > 0 ? solaredgePower + batteryPower : solaredgePower - Math.abs(batteryPower))",
+      "Solaredge_Leistung": "inverterAcPower"
+    },
+    "registers": {
+      "inverterAcPower": 40083,
+      "inverterAcPowerSf": 40084,
+      "inverterAcEnergyWh": 40094,
+      "inverterAcEnergyWhSf": 40096,
+      "meterAcPower": 40207,
+      "meterAcPowerSf": 40211,
+      "batteryDcPower": 57716,
+      "batteryEnergyMax": 57726,
+      "batteryEnergyAvailable": 57728,
+      "batterySoc": 57732,
+      "batteryImportEnergyWh": 57722,
+      "batteryExportEnergyWh": 57718,
+      "batterySocMin": 0
+    }
+  },
+  "cloud": {
+    "enabled": true,
+    "baseUrl": "https://monitoringapi.solaredge.com",
+    "rejectUnauthorized": true,
+    "dailyEnergyType": "Production",
+    "siteId": "123456",
+    "apiKey": "REPLACE_WITH_SOLAREDGE_API_KEY"
+  }
+}

@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SolarEdge Compare Dashboard</title>
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --good: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --accent: #14532d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top right, #dbeafe 0%, var(--bg) 38%);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: baseline;
+      margin-bottom: 16px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0.2px;
+    }
+    .muted { color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 24px rgba(17, 24, 39, 0.05);
+    }
+    .kpis { grid-column: span 12; }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fcfcfd;
+    }
+    .kpi .name { font-size: 13px; color: var(--muted); }
+    .kpi .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    .kpi .delta { font-size: 13px; margin-top: 2px; }
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .chart { grid-column: span 8; }
+    .table { grid-column: span 4; }
+    .config { grid-column: span 12; }
+    @media (max-width: 900px) {
+      .chart, .table { grid-column: span 12; }
+    }
+    .svg-wrap {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+    }
+    svg { width: 100%; height: 280px; display: block; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 7px 6px;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .foot {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      border-radius: 9px;
+      padding: 9px 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    textarea { min-height: 42px; }
+    .cfg-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+    }
+    .field { grid-column: span 3; }
+    .field.wide { grid-column: span 6; }
+    .field.full { grid-column: span 12; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .cfg-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .secondary {
+      background: #334155;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media (max-width: 900px) {
+      .field, .field.wide, .field.full { grid-column: span 12; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h1>SolarEdge Compare Dashboard</h1>
+        <div class="muted" id="lastUpdate">warte auf Daten...</div>
+      </div>
+      <div>
+        <button id="refreshBtn">Jetzt aktualisieren</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card kpis">
+        <h3>Aktuelle Vergleichswerte</h3>
+        <div class="kpi-grid" id="kpis"></div>
+      </section>
+
+      <section class="card chart">
+        <h3>Delta-Verlauf (W)</h3>
+        <div class="svg-wrap">
+          <svg id="deltaChart" viewBox="0 0 900 280" preserveAspectRatio="none"></svg>
+        </div>
+      </section>
+
+      <section class="card table">
+        <h3>Letzte Messpunkte</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Zeit</th>
+              <th>PV dW</th>
+              <th>SE dW</th>
+            </tr>
+          </thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+      </section>
+
+      <section class="card config">
+        <h3>Konfiguration (Wrapper)</h3>
+        <div class="cfg-grid" id="cfgFields"></div>
+        <div class="cfg-actions">
+          <button id="cfgSaveBtn">Konfiguration speichern</button>
+          <button id="cfgReloadBtn" class="secondary">Neu laden</button>
+          <div id="cfgStatus" class="status">noch nicht geladen</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="foot">
+      Datenquelle: /api/latest und /api/history
+    </div>
+  </div>
+
+  <script>
+    const metrics = [
+      ["Modbus_Status", "bool"],
+      ["PV_Leistung", "W"],
+      ["PV_Energie_Tag", "Wh"],
+      ["Solaredge_Leistung", "W"],
+      ["Solaredge_Energie_Tag", "Wh"],
+      ["Batterie_Leistung", "W"],
+      ["Batterie_SOC", "%"],
+      ["Batterie_Uhrzeit", ""],
+      ["Grid_Leistung", "W"],
+    ];
+
+    const cfgSpec = [
+      { key: "pollIntervalSec", type: "number", label: "Poll Interval (sec)", cls: "field" },
+      { key: "historyKeep", type: "number", label: "History Keep", cls: "field" },
+      { key: "modbus.host", type: "text", label: "Modbus Host", cls: "field wide" },
+      { key: "modbus.port", type: "number", label: "Modbus Port", cls: "field" },
+      { key: "modbus.unitId", type: "number", label: "Modbus Unit ID", cls: "field" },
+      { key: "modbus.addressMode", type: "select", label: "Address Mode", cls: "field", options: ["absolute40001", "zeroBased"] },
+      { key: "modbus.invertGridPowerSign", type: "checkbox", label: "Invert Grid Power Sign", cls: "field" },
+      { key: "modbus.batteryAcEfficiency", type: "number", label: "Battery AC Efficiency", cls: "field" },
+      { key: "cloud.enabled", type: "checkbox", label: "Cloud Enabled", cls: "field" },
+      { key: "cloud.rejectUnauthorized", type: "checkbox", label: "Cloud TLS verify cert", cls: "field" },
+      { key: "cloud.dailyEnergyType", type: "select", label: "Cloud daily energy source", cls: "field", options: ["Production", "SelfConsumption", "Consumption", "FeedIn", "Purchased", "OverviewLastDay"] },
+      { key: "cloud.baseUrl", type: "text", label: "Cloud Base URL", cls: "field wide" },
+      { key: "cloud.siteId", type: "text", label: "Cloud Site ID", cls: "field" },
+      { key: "cloud.apiKey", type: "text", label: "Cloud API Key", cls: "field wide" },
+
+      { key: "modbus.registers.inverterAcPower", type: "number", label: "Reg inverterAcPower", cls: "field" },
+      { key: "modbus.registers.inverterAcPowerSf", type: "number", label: "Reg inverterAcPowerSf", cls: "field" },
+      { key: "modbus.registers.inverterAcEnergyWh", type: "number", label: "Reg inverterAcEnergyWh", cls: "field" },
+      { key: "modbus.registers.inverterAcEnergyWhSf", type: "number", label: "Reg inverterAcEnergyWhSf", cls: "field" },
+      { key: "modbus.registers.meterAcPower", type: "number", label: "Reg meterAcPower", cls: "field" },
+      { key: "modbus.registers.meterAcPowerSf", type: "number", label: "Reg meterAcPowerSf", cls: "field" },
+      { key: "modbus.registers.batteryDcPower", type: "number", label: "Reg batteryDcPower", cls: "field" },
+      { key: "modbus.registers.batteryEnergyMax", type: "number", label: "Reg batteryEnergyMax", cls: "field" },
+      { key: "modbus.registers.batteryEnergyAvailable", type: "number", label: "Reg batteryEnergyAvailable", cls: "field" },
+      { key: "modbus.registers.batterySoc", type: "number", label: "Reg batterySoc", cls: "field" },
+      { key: "modbus.registers.batteryImportEnergyWh", type: "number", label: "Reg batteryImportEnergyWh", cls: "field" },
+      { key: "modbus.registers.batteryExportEnergyWh", type: "number", label: "Reg batteryExportEnergyWh", cls: "field" },
+      { key: "modbus.registers.batterySocMin", type: "number", label: "Reg batterySocMin", cls: "field" },
+
+      { key: "modbus.formulas.Batterie_Leistung", type: "textarea", label: "Formula Batterie_Leistung", cls: "field full" },
+      { key: "modbus.formulas.PV_Leistung", type: "textarea", label: "Formula PV_Leistung", cls: "field full" },
+      { key: "modbus.formulas.Solaredge_Leistung", type: "textarea", label: "Formula Solaredge_Leistung", cls: "field full" },
+    ];
+
+    let loadedConfig = null;
+
+    function isNum(v) {
+      return typeof v === "number" && Number.isFinite(v);
+    }
+
+    function fmt(v, d = 1) {
+      if (typeof v === "boolean") {
+        return v ? "connected" : "not connected";
+      }
+      if (typeof v === "string") {
+        return v;
+      }
+      return isNum(v) ? v.toFixed(d) : "-";
+    }
+
+    function deltaClass(abs) {
+      if (!isNum(abs)) return "warn";
+      if (abs < 40) return "good";
+      if (abs < 160) return "warn";
+      return "bad";
+    }
+
+    function mapDelta(local, cloud) {
+      if (!isNum(local) || !isNum(cloud)) return null;
+      return local - cloud;
+    }
+
+    function renderKpis(latest) {
+      const root = document.getElementById("kpis");
+      root.innerHTML = "";
+
+      const local = latest?.local || {};
+      const cloud = latest?.cloud?.mapped || {};
+
+      for (const [k, unit] of metrics) {
+        const lv = local[k];
+        const cv = cloud[k];
+
+        if (k === "Modbus_Status") {
+          const statusClass = lv === true ? "good" : "bad";
+          const el = document.createElement("div");
+          el.className = "kpi";
+          el.innerHTML = `
+            <div class="name">${k}</div>
+            <div class="value ${statusClass}">${fmt(lv)}</div>
+            <div class="delta ${statusClass}">${lv === true ? "true" : "false"}</div>
+          `;
+          root.appendChild(el);
+          continue;
+        }
+
+        const d = mapDelta(lv, cv);
+        const abs = isNum(d) ? Math.abs(d) : null;
+        const unitSuffix = unit ? ` ${unit}` : "";
+        const hasCompare = isNum(lv) && isNum(cv);
+        const deltaText = hasCompare
+          ? `Cloud ${fmt(cv)} | Delta ${fmt(d)}`
+          : "Cloud - | Delta -";
+
+        const el = document.createElement("div");
+        el.className = "kpi";
+        el.innerHTML = `
+          <div class="name">${k}</div>
+          <div class="value">${fmt(lv)}${unitSuffix}</div>
+          <div class="delta ${deltaClass(abs)}">${deltaText}</div>
+        `;
+        root.appendChild(el);
+      }
+    }
+
+    function renderHistoryRows(history) {
+      const rows = document.getElementById("historyRows");
+      rows.innerHTML = "";
+      const last = history.slice(-10).reverse();
+
+      for (const x of last) {
+        const ts = new Date(x.ts).toLocaleTimeString();
+        const pvD = mapDelta(x.local?.PV_Leistung, x.cloud?.mapped?.PV_Leistung);
+        const seD = mapDelta(x.local?.Solaredge_Leistung, x.cloud?.mapped?.Solaredge_Leistung);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${ts}</td><td>${fmt(pvD)}</td><td>${fmt(seD)}</td>`;
+        rows.appendChild(tr);
+      }
+    }
+
+    function buildPath(points, minY, maxY, w, h) {
+      if (points.length === 0) return "";
+      const yRange = Math.max(1, maxY - minY);
+      const xStep = points.length <= 1 ? w : w / (points.length - 1);
+      return points
+        .map((p, i) => {
+          const x = i * xStep;
+          const y = h - ((p - minY) / yRange) * h;
+          return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+        })
+        .join(" ");
+    }
+
+    function renderChart(history) {
+      const svg = document.getElementById("deltaChart");
+      svg.innerHTML = "";
+
+      const pointsPv = history
+        .map((x) => mapDelta(x.local?.PV_Leistung, x.cloud?.mapped?.PV_Leistung))
+        .filter(isNum);
+      const pointsSe = history
+        .map((x) => mapDelta(x.local?.Solaredge_Leistung, x.cloud?.mapped?.Solaredge_Leistung))
+        .filter(isNum);
+
+      const all = [...pointsPv, ...pointsSe];
+      if (all.length < 2) {
+        svg.innerHTML = "<text x='20' y='30' fill='#6b7280'>Noch nicht genug Historie vorhanden.</text>";
+        return;
+      }
+
+      const minY = Math.min(...all, 0);
+      const maxY = Math.max(...all, 0);
+      const w = 900;
+      const h = 280;
+
+      const zeroY = h - ((0 - minY) / Math.max(1, maxY - minY)) * h;
+      const axis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      axis.setAttribute("x1", "0");
+      axis.setAttribute("x2", String(w));
+      axis.setAttribute("y1", String(zeroY));
+      axis.setAttribute("y2", String(zeroY));
+      axis.setAttribute("stroke", "#d1d5db");
+      axis.setAttribute("stroke-width", "1");
+      svg.appendChild(axis);
+
+      const p1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p1.setAttribute("d", buildPath(pointsPv, minY, maxY, w, h));
+      p1.setAttribute("fill", "none");
+      p1.setAttribute("stroke", "#14532d");
+      p1.setAttribute("stroke-width", "2");
+      svg.appendChild(p1);
+
+      const p2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p2.setAttribute("d", buildPath(pointsSe, minY, maxY, w, h));
+      p2.setAttribute("fill", "none");
+      p2.setAttribute("stroke", "#b45309");
+      p2.setAttribute("stroke-width", "2");
+      svg.appendChild(p2);
+
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", "8");
+      label.setAttribute("y", "16");
+      label.setAttribute("fill", "#6b7280");
+      label.textContent = `PV Delta (gruen), Solaredge Delta (orange), Min ${minY.toFixed(1)} / Max ${maxY.toFixed(1)} W`;
+      svg.appendChild(label);
+    }
+
+    function getByPath(obj, keyPath) {
+      return keyPath.split(".").reduce((acc, k) => (acc == null ? undefined : acc[k]), obj);
+    }
+
+    function setByPath(obj, keyPath, value) {
+      const parts = keyPath.split(".");
+      let ref = obj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const k = parts[i];
+        if (!ref[k] || typeof ref[k] !== "object") {
+          ref[k] = {};
+        }
+        ref = ref[k];
+      }
+      ref[parts[parts.length - 1]] = value;
+    }
+
+    function normalizeFieldValue(spec, raw) {
+      if (spec.type === "number") {
+        if (raw === "" || raw == null) return null;
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : null;
+      }
+      if (spec.type === "checkbox") {
+        return Boolean(raw);
+      }
+      return raw;
+    }
+
+    function renderConfigForm(config) {
+      const root = document.getElementById("cfgFields");
+      root.innerHTML = "";
+
+      for (const spec of cfgSpec) {
+        const wrapper = document.createElement("div");
+        wrapper.className = spec.cls || "field";
+
+        const label = document.createElement("label");
+        label.textContent = spec.label;
+        wrapper.appendChild(label);
+
+        let input;
+        const value = getByPath(config, spec.key);
+
+        if (spec.type === "textarea") {
+          input = document.createElement("textarea");
+          input.value = value == null ? "" : String(value);
+        } else if (spec.type === "select") {
+          input = document.createElement("select");
+          for (const o of spec.options || []) {
+            const opt = document.createElement("option");
+            opt.value = o;
+            opt.textContent = o;
+            if (value === o) opt.selected = true;
+            input.appendChild(opt);
+          }
+        } else if (spec.type === "checkbox") {
+          input = document.createElement("input");
+          input.type = "checkbox";
+          input.checked = Boolean(value);
+          input.style.width = "18px";
+          input.style.height = "18px";
+        } else {
+          input = document.createElement("input");
+          input.type = spec.type || "text";
+          input.value = value == null ? "" : String(value);
+        }
+
+        input.dataset.keyPath = spec.key;
+        input.dataset.kind = spec.type;
+        wrapper.appendChild(input);
+        root.appendChild(wrapper);
+      }
+    }
+
+    async function loadConfig() {
+      const status = document.getElementById("cfgStatus");
+      status.textContent = "lade Konfiguration...";
+
+      const res = await fetch("/api/config");
+      const json = await res.json();
+      if (!json.ok) {
+        throw new Error(json.message || "Config load failed");
+      }
+
+      loadedConfig = json.data;
+      renderConfigForm(loadedConfig);
+      status.textContent = "Konfiguration geladen";
+    }
+
+    async function saveConfig() {
+      if (!loadedConfig || typeof loadedConfig !== "object") {
+        loadedConfig = {};
+      }
+
+      const status = document.getElementById("cfgStatus");
+      status.textContent = "speichere...";
+
+      const next = JSON.parse(JSON.stringify(loadedConfig));
+      const fields = document.querySelectorAll("#cfgFields [data-key-path]");
+
+      for (const el of fields) {
+        const spec = cfgSpec.find((s) => s.key === el.dataset.keyPath);
+        if (!spec) continue;
+
+        let raw;
+        if (spec.type === "checkbox") {
+          raw = el.checked;
+        } else {
+          raw = el.value;
+        }
+        const val = normalizeFieldValue(spec, raw);
+        setByPath(next, spec.key, val);
+      }
+
+      const res = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        throw new Error(json.message || "Save failed");
+      }
+
+      loadedConfig = next;
+      status.textContent = "Konfiguration gespeichert. Wrapper neu starten, damit Werte neu gelesen werden.";
+    }
+
+    async function loadData() {
+      const [latestRes, historyRes] = await Promise.all([
+        fetch("/api/latest"),
+        fetch("/api/history"),
+      ]);
+
+      const latestJson = await latestRes.json();
+      const historyJson = await historyRes.json();
+
+      const latest = latestJson?.data || null;
+      const history = Array.isArray(historyJson?.data) ? historyJson.data : [];
+
+      if (latest?.ts) {
+        document.getElementById("lastUpdate").textContent =
+          "letztes Update: " + new Date(latest.ts).toLocaleString();
+      }
+
+      renderKpis(latest);
+      renderHistoryRows(history);
+      renderChart(history);
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", () => {
+      loadData().catch((err) => {
+        console.error(err);
+      });
+    });
+
+    document.getElementById("cfgReloadBtn").addEventListener("click", () => {
+      loadConfig().catch((err) => {
+        document.getElementById("cfgStatus").textContent = `Fehler: ${err.message}`;
+      });
+    });
+
+    document.getElementById("cfgSaveBtn").addEventListener("click", () => {
+      saveConfig().catch((err) => {
+        document.getElementById("cfgStatus").textContent = `Fehler: ${err.message}`;
+      });
+    });
+
+    loadData().catch((err) => {
+      document.getElementById("lastUpdate").textContent = "Fehler beim Laden: " + err.message;
+    });
+
+    loadConfig().catch((err) => {
+      document.getElementById("cfgStatus").textContent = `Fehler: ${err.message}`;
+    });
+
+    setInterval(() => {
+      loadData().catch(() => {});
+    }, 5000);
+  </script>
+</body>
+</html>

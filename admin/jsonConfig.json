@@ -1,0 +1,277 @@
+{
+  "i18n": true,
+  "type": "tabs",
+  "items": {
+    "main": {
+      "type": "panel",
+      "label": "Connection",
+      "items": {
+        "host": {
+          "type": "text",
+          "label": "Host",
+          "newLine": true,
+          "xs": 12,
+          "sm": 6,
+          "md": 4
+        },
+        "port": {
+          "type": "number",
+          "label": "Port",
+          "min": 1,
+          "max": 65535,
+          "xs": 12,
+          "sm": 3,
+          "md": 2
+        },
+        "unitId": {
+          "type": "number",
+          "label": "Unit ID",
+          "min": 1,
+          "max": 247,
+          "xs": 12,
+          "sm": 3,
+          "md": 2
+        },
+        "pollIntervalSec": {
+          "type": "number",
+          "label": "Poll interval (sec)",
+          "min": 2,
+          "max": 3600,
+          "newLine": true,
+          "xs": 12,
+          "sm": 3,
+          "md": 2
+        },
+        "addressMode": {
+          "type": "select",
+          "label": "Address mode",
+          "options": [
+            {
+              "label": "Absolute (40001 based)",
+              "value": "absolute40001"
+            },
+            {
+              "label": "Zero based",
+              "value": "zeroBased"
+            }
+          ],
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "invertGridPowerSign": {
+          "type": "checkbox",
+          "label": "Invert grid power sign",
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "batteryAcEfficiency": {
+          "type": "number",
+          "label": "Battery DC to AC efficiency",
+          "min": 0.5,
+          "max": 1,
+          "step": 0.01,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        }
+      }
+    },
+    "registers": {
+      "type": "panel",
+      "label": "Registers",
+      "items": {
+        "registers.inverterAcPower": {
+          "type": "number",
+          "label": "Inverter AC Power (int16)",
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.inverterAcPowerSf": {
+          "type": "number",
+          "label": "Inverter AC Power SF (int16)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.inverterAcEnergyWh": {
+          "type": "number",
+          "label": "Inverter AC Energy Total (uint32)",
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.inverterAcEnergyWhSf": {
+          "type": "number",
+          "label": "Inverter AC Energy SF (int16)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.meterAcPower": {
+          "type": "number",
+          "label": "Grid Meter AC Power (int16)",
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.meterAcPowerSf": {
+          "type": "number",
+          "label": "Grid Meter AC Power SF (int16)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batteryDcPower": {
+          "type": "number",
+          "label": "Battery DC Power (float32)",
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batteryEnergyMax": {
+          "type": "number",
+          "label": "Battery Energy Max (float32)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batteryEnergyAvailable": {
+          "type": "number",
+          "label": "Battery Energy Available (float32)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batterySoc": {
+          "type": "number",
+          "label": "Battery SOC (float32)",
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batteryImportEnergyWh": {
+          "type": "number",
+          "label": "Battery Import Energy (uint64)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batteryExportEnergyWh": {
+          "type": "number",
+          "label": "Battery Export Energy (uint64)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batterySocMin": {
+          "type": "number",
+          "label": "Battery SOC Min (optional float32, 0=calc)",
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        },
+        "registers.batteryOperatingState": {
+          "type": "number",
+          "label": "Battery Operating State (uint32 word-swap)",
+          "xs": 12,
+          "sm": 4,
+          "md": 3
+        }
+      }
+    },
+    "formulas": {
+      "type": "panel",
+      "label": "Formulas",
+      "items": {
+        "formulas.Batterie_Energie_max": {
+          "type": "text",
+          "label": "Batterie_Energie_max",
+          "newLine": true,
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Batterie_Leistung": {
+          "type": "text",
+          "label": "Batterie_Leistung",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Batterie_SOC": {
+          "type": "text",
+          "label": "Batterie_SOC",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Batterie_SOC_min": {
+          "type": "text",
+          "label": "Batterie_SOC_min",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Batterie_Time": {
+          "type": "text",
+          "label": "Batterie_Time",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.PV_Leistung": {
+          "type": "text",
+          "label": "PV_Leistung",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.PV_Energie_Gesamt": {
+          "type": "text",
+          "label": "PV_Energie_Gesamt",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.PV_Energie_Tag": {
+          "type": "text",
+          "label": "PV_Energie_Tag",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Solaredge_Leistung": {
+          "type": "text",
+          "label": "Solaredge_Leistung",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Solaredge_Energie_Tag": {
+          "type": "text",
+          "label": "Solaredge_Energie_Tag",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Grid_Leistung": {
+          "type": "text",
+          "label": "Grid_Leistung",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        }
+      }
+    }
+  }
+}
