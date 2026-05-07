@@ -137,13 +137,6 @@
           "sm": 4,
           "md": 3
         },
-        "registers.batteryEnergyAvailable": {
-          "type": "number",
-          "label": "Battery Energy Available (float32)",
-          "xs": 12,
-          "sm": 4,
-          "md": 3
-        },
         "registers.batterySoc": {
           "type": "number",
           "label": "Battery SOC (float32)",

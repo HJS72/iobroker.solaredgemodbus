@@ -368,7 +368,6 @@ class Solaredgemodbus extends utils.Adapter {
       { key: "meterPowerSf", address: registers.meterAcPowerSf, len: 1 },
       { key: "battPower", address: registers.batteryDcPower, len: 2 },
       { key: "battEnergyMax", address: registers.batteryEnergyMax, len: 2 },
-      { key: "battEnergyAvail", address: registers.batteryEnergyAvailable, len: 2 },
       { key: "battSoc", address: registers.batterySoc, len: 2 },
       { key: "battImport", address: registers.batteryImportEnergyWh, len: 4 },
       { key: "battExport", address: registers.batteryExportEnergyWh, len: 4 },
@@ -554,14 +553,9 @@ class Solaredgemodbus extends utils.Adapter {
       const battEnergyMaxRegs = raw.battEnergyMax;
       const batteryEnergyMax = this.regsToFloat32LittleWord(battEnergyMaxRegs[0], battEnergyMaxRegs[1]);
 
-      const battEnergyAvailRegs = raw.battEnergyAvail;
-      const batteryEnergyAvailable = this.regsToFloat32LittleWord(
-        battEnergyAvailRegs[0],
-        battEnergyAvailRegs[1],
-      );
-
       const battSocRegs = raw.battSoc;
       const batterySoc = this.regsToFloat32LittleWord(battSocRegs[0], battSocRegs[1]);
+      let batteryEnergyAvailable = null;
 
       const batteryImportEnergyWh = raw.battImport ? this.regsToUInt64From4(raw.battImport) : null;
       const batteryExportEnergyWh = raw.battExport ? this.regsToUInt64From4(raw.battExport) : null;
@@ -599,10 +593,18 @@ class Solaredgemodbus extends utils.Adapter {
         { ...formulaCtx, solaredgePower, batteryAcPower, gridPower },
         inverterAcPower === null || batteryAcPower === null ? inverterAcPower : inverterAcPower - batteryAcPower,
       );
+      const pvPowerOut =
+        Number.isFinite(pvPower)
+          ? pvPower
+          : Number.isFinite(solaredgePower)
+            ? solaredgePower
+            : Number.isFinite(this.dayCache.lastPvPower)
+              ? this.dayCache.lastPvPower
+              : null;
 
       const pvEnergyTotal = this.evalFormula(
         "PV_Energie_Gesamt",
-        { ...formulaCtx, batteryAcPower, pvPower },
+        { ...formulaCtx, batteryAcPower, pvPower: pvPowerOut },
         inverterEnergyWh,
       );
       const batteryEnergyMaxOut = this.evalFormula("Batterie_Energie_max", formulaCtx, batteryEnergyMax);
@@ -621,8 +623,8 @@ class Solaredgemodbus extends utils.Adapter {
             ? solaredgePower
             : null;
         this.dayCache.lastPvPower =
-          typeof pvPower === "number" && Number.isFinite(pvPower)
-            ? pvPower
+          typeof pvPowerOut === "number" && Number.isFinite(pvPowerOut)
+            ? pvPowerOut
             : null;
       } else {
         const prevTs = this.dayCache.lastSampleTs;
@@ -633,8 +635,8 @@ class Solaredgemodbus extends utils.Adapter {
             : null;
         const prevPv = this.dayCache.lastPvPower;
         const currPv =
-          typeof pvPower === "number" && Number.isFinite(pvPower)
-            ? pvPower
+          typeof pvPowerOut === "number" && Number.isFinite(pvPowerOut)
+            ? pvPowerOut
             : null;
 
         if (prevTs && prevP !== null && currP !== null && nowTs > prevTs) {
@@ -679,7 +681,7 @@ class Solaredgemodbus extends utils.Adapter {
         ...formulaCtx,
         solaredgePower,
         batteryAcPower,
-        pvPower,
+        pvPower: pvPowerOut,
         pvEnergyTotal,
       };
 
@@ -688,7 +690,18 @@ class Solaredgemodbus extends utils.Adapter {
         dayCtx,
         solaredgeEnergyDayDefault,
       );
-      const pvEnergyDay = this.evalFormula("PV_Energie_Tag", dayCtx, pvEnergyDayDefault);
+      const pvEnergyDayRaw = this.evalFormula("PV_Energie_Tag", dayCtx, pvEnergyDayDefault);
+      const pvEnergyDay = Number.isFinite(pvEnergyDayRaw) ? pvEnergyDayRaw : pvEnergyDayDefault;
+
+      batterySocMin = this.evalFormula("Batterie_SOC_min", { ...dayCtx, batterySocMin }, batterySocMin);
+      if (
+        Number.isFinite(batteryEnergyMaxOut) &&
+        Number.isFinite(batterySocOut) &&
+        Number.isFinite(batterySocMin)
+      ) {
+        const dischargeDeltaSoc = Math.max(0, batterySocOut - batterySocMin);
+        batteryEnergyAvailable = (batteryEnergyMaxOut * dischargeDeltaSoc) / 100;
+      }
 
       let batteryTime = null;
       if (
@@ -700,7 +713,21 @@ class Solaredgemodbus extends utils.Adapter {
         if (batteryAcPower > 0) {
           batteryTime = batteryEnergyAvailable / batteryAcPower;
         } else {
-          batteryTime = (batteryEnergyMaxOut - batteryEnergyAvailable) / Math.abs(batteryAcPower);
+          const chargeDeltaSoc = Math.max(0, 100 - batterySocOut);
+          batteryTime = ((batteryEnergyMaxOut * chargeDeltaSoc) / 100) / Math.abs(batteryAcPower);
+        }
+      } else if (
+        batteryAcPower !== null &&
+        Math.abs(batteryAcPower) > 1 &&
+        batteryEnergyMaxOut !== null &&
+        batterySocOut !== null
+      ) {
+        if (batteryAcPower > 0 && batterySocMin !== null && batterySocMin !== undefined) {
+          const dischargeDeltaSoc = Math.max(0, batterySocOut - batterySocMin);
+          batteryTime = ((batteryEnergyMaxOut * dischargeDeltaSoc) / 100) / Math.abs(batteryAcPower);
+        } else if (batteryAcPower < 0) {
+          const chargeDeltaSoc = Math.max(0, 100 - batterySocOut);
+          batteryTime = ((batteryEnergyMaxOut * chargeDeltaSoc) / 100) / Math.abs(batteryAcPower);
         }
       }
       batteryTime = this.evalFormula(
@@ -713,8 +740,6 @@ class Solaredgemodbus extends utils.Adapter {
         },
         batteryTime,
       );
-
-      batterySocMin = this.evalFormula("Batterie_SOC_min", { ...dayCtx, batterySocMin }, batterySocMin);
       const batteryTargetClock = this.calcBatteryTargetClock(
         batterySocOut,
         batteryAcPower,
@@ -730,7 +755,7 @@ class Solaredgemodbus extends utils.Adapter {
       await this.setStringState("Batterie_Uhrzeit", batteryTargetClock);
       await this.setNumberState("Batterie_Betriebszustand", batteryOperatingState, 0);
 
-      await this.setNumberState("PV_Leistung", pvPower, 1);
+      await this.setNumberState("PV_Leistung", pvPowerOut, 1);
       await this.setNumberState("PV_Energie_Gesamt", pvEnergyTotal, 1);
       await this.setNumberState("PV_Energie_Tag", pvEnergyDay, 1);
 

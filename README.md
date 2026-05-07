@@ -34,7 +34,6 @@ Hinweis: Register sind in der Admin-Seite komplett konfigurierbar.
 | Meter AC Power SF | int16 | 40211 |
 | Battery DC Power | float32 (little-word) | 57716 |
 | Battery Energy Max | float32 (little-word) | 57726 |
-| Battery Energy Available | float32 (little-word) | 57728 |
 | Battery SOC | float32 (little-word) | 57732 |
 | Battery Export Energy | uint64 | 57718 |
 | Battery Import Energy | uint64 | 57722 |
@@ -60,9 +59,8 @@ Verfuegbare Variablen (Auszug):
 - gridPower
 - batteryDcPower
 - batteryEnergyMax
-- batteryEnergyAvailable
+- batteryEnergyAvailable (berechnet aus batteryEnergyMax * max(0, batterySoc - batterySocMin) / 100)
 - batterySoc
-- batterySocMinRegister
 - batteryImportEnergyWh
 - batteryExportEnergyWh
 - batteryAcEfficiency
