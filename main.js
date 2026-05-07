@@ -62,6 +62,9 @@ class Solaredgemodbus extends utils.Adapter {
     this.formulaWarnings = new Set();
     this.invalidBatteryOperatingStateAddressWarned = false;
     this.legacyAddressWarnings = new Set();
+    // Circuit-breaker: tracks consecutive timeouts per register block
+    // Map<groupStart, { consecutiveErrors: number, skipUntil: number }>
+    this.registerCircuitBreaker = new Map();
 
     this.on("ready", this.onReady.bind(this));
     this.on("unload", this.onUnload.bind(this));
@@ -431,19 +434,45 @@ class Solaredgemodbus extends utils.Adapter {
     const defs = this.buildReadPlan(registers);
     const groups = this.mergeReadPlan(defs);
     const out = {};
+    const CIRCUIT_BREAK_AFTER = 3;
+    const CIRCUIT_BREAK_MS = 5 * 60 * 1000; // 5 minutes
+    const now = Date.now();
 
     for (const group of groups) {
+      const cb = this.registerCircuitBreaker.get(group.start);
+      if (cb && cb.skipUntil > now) {
+        for (const item of group.items) {
+          out[item.key] = Array(item.len).fill(null);
+        }
+        continue;
+      }
+
       const len = group.end - group.start + 1;
       try {
         const res = await this.client.readHoldingRegisters(group.start, len);
         const data = res.data;
+
+        // Successful read: reset circuit breaker
+        this.registerCircuitBreaker.delete(group.start);
 
         for (const item of group.items) {
           const start = item.offset - group.start;
           out[item.key] = data.slice(start, start + item.len);
         }
       } catch (err) {
-        this.log.warn(`Skipping register block ${group.start}-${group.end}: ${err.message}`);
+        const prev = this.registerCircuitBreaker.get(group.start) || { consecutiveErrors: 0, skipUntil: 0 };
+        const next = { consecutiveErrors: prev.consecutiveErrors + 1, skipUntil: 0 };
+
+        if (next.consecutiveErrors >= CIRCUIT_BREAK_AFTER) {
+          next.skipUntil = now + CIRCUIT_BREAK_MS;
+          this.log.warn(
+            `Register block ${group.start}-${group.end} failed ${next.consecutiveErrors}x in a row (${err.message}). Pausing for 5 min.`,
+          );
+        } else {
+          this.log.warn(`Skipping register block ${group.start}-${group.end}: ${err.message}`);
+        }
+
+        this.registerCircuitBreaker.set(group.start, next);
         for (const item of group.items) {
           out[item.key] = Array(item.len).fill(null);
         }
