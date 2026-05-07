@@ -76,6 +76,10 @@ class Solaredgemodbus extends utils.Adapter {
     await this.ensureStates();
     await this.ensureInfoConnectionObject();
     await this.cleanupRemovedStates();
+    
+    // Subscribe to changes of Batterie_Betriebsmodus state
+    this.subscribeStates("Batterie_Betriebsmodus");
+    
     await this.setConnectionStatus(false);
     await this.runPollCycle();
     const intervalSec = Math.max(1, Number(this.config.pollIntervalSec) || 1);
@@ -213,20 +217,25 @@ class Solaredgemodbus extends utils.Adapter {
   }
 
   async onStateChange(id, state) {
-    this.log.debug(`onStateChange: id=${id}, state.val=${state?.val}, state.ack=${state?.ack}`);
+    const batteryModeStateId = `${this.namespace}.Batterie_Betriebsmodus`;
+    this.log.silly(`[onStateChange] ALL changes: id=${id}, state=${JSON.stringify(state)}`);
     
-    if (!state || state.ack) {
-      this.log.debug(`onStateChange skipped: no state or ack=true`);
+    if (!state) {
+      this.log.silly(`[onStateChange] Skipped: no state object`);
+      return;
+    }
+    
+    if (state.ack) {
+      this.log.silly(`[onStateChange] Skipped: state.ack=true (id=${id})`);
       return;
     }
 
-    const fullId = `${this.namespace}.Batterie_Betriebsmodus`;
-    if (id !== fullId && !id.endsWith(".Batterie_Betriebsmodus")) {
-      this.log.debug(`onStateChange skipped: not Batterie_Betriebsmodus (id=${id}, expected=${fullId})`);
+    if (id !== batteryModeStateId) {
+      this.log.silly(`[onStateChange] Skipped: not target state (id=${id}, expected=${batteryModeStateId})`);
       return;
     }
 
-    this.log.info(`Batterie_Betriebsmodus change detected: value=${state.val}`);
+    this.log.info(`Batterie_Betriebsmodus change detected: new value=${state.val}`);
     const configuredRegisterAddress = Number(
       this.config.registers?.batteryOperatingState ?? this.config.registers?.write103237,
     ) || 103237;
