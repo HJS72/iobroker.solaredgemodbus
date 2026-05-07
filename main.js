@@ -741,10 +741,10 @@ class Solaredgemodbus extends utils.Adapter {
       };
 
       const batteryAcPowerDefault = batteryDcPower === null ? null : batteryDcPower * efficiency;
-      const solaredgePower = this.evalFormula("Solaredge_Leistung", formulaCtx, inverterAcPower);
-      const batteryAcPower = this.evalFormula("Batterie_Leistung", formulaCtx, batteryAcPowerDefault);
+      let solaredgePower = this.evalFormula("Solaredge_Leistung", formulaCtx, inverterAcPower);
+      let batteryAcPower = this.evalFormula("Batterie_Leistung", formulaCtx, batteryAcPowerDefault);
       gridPower = this.evalFormula("Grid_Leistung", { ...formulaCtx, solaredgePower, batteryAcPower }, gridPower);
-      const pvPower = this.evalFormula(
+      let pvPower = this.evalFormula(
         "PV_Leistung",
         { ...formulaCtx, solaredgePower, batteryAcPower, gridPower },
         inverterAcPower === null || batteryAcPower === null ? inverterAcPower : inverterAcPower - batteryAcPower,
