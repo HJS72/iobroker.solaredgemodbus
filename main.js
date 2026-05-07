@@ -47,6 +47,7 @@ class Solaredgemodbus extends utils.Adapter {
 
     this.client = new ModbusRTU();
     this.pollTimer = null;
+    this.pollInProgress = false;
     this.dayCache = {
       dateKey: "",
       minSoc: null,
@@ -75,11 +76,24 @@ class Solaredgemodbus extends utils.Adapter {
     await this.ensureInfoConnectionObject();
     await this.cleanupRemovedStates();
     await this.setConnectionStatus(false);
-    await this.pollOnce();
+    await this.runPollCycle();
     const intervalSec = Math.max(1, Number(this.config.pollIntervalSec) || 1);
     this.pollTimer = setInterval(() => {
-      this.pollOnce().catch((err) => this.log.warn(`pollOnce failed: ${err.message}`));
+      this.runPollCycle().catch((err) => this.log.warn(`poll cycle failed: ${err.message}`));
     }, intervalSec * 1000);
+  }
+
+  async runPollCycle() {
+    if (this.pollInProgress) {
+      return;
+    }
+
+    this.pollInProgress = true;
+    try {
+      await this.pollOnce();
+    } finally {
+      this.pollInProgress = false;
+    }
   }
 
   async onUnload(callback) {
