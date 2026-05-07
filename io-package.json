@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "solaredgemodbus",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "titleLang": {
       "en": "SolarEdge Modbus",
       "de": "SolarEdge Modbus"

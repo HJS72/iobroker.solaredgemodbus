@@ -503,10 +503,23 @@ class Solaredgemodbus extends utils.Adapter {
       }
 
       const len = group.end - group.start + 1;
-      try {
-        const res = await this.client.readHoldingRegisters(group.start, len);
-        const data = res.data;
+      let data = null;
+      let lastErr = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const res = await this.client.readHoldingRegisters(group.start, len);
+          data = res.data;
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (attempt < 2) {
+            await this.waitMs(50);
+          }
+        }
+      }
 
+      if (!lastErr) {
         // Successful read: reset circuit breaker
         this.registerCircuitBreaker.delete(group.start);
 
@@ -517,7 +530,8 @@ class Solaredgemodbus extends utils.Adapter {
           this.lastGoodRawByKey.set(item.key, slice.slice());
         }
         await this.waitMs(readIntervalMs);
-      } catch (err) {
+      } else {
+        const err = lastErr;
         const prev = this.registerCircuitBreaker.get(group.start) || { consecutiveErrors: 0, skipUntil: 0 };
         const next = { consecutiveErrors: prev.consecutiveErrors + 1, skipUntil: 0 };
 

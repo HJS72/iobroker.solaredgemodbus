@@ -1,6 +1,6 @@
 {
   "name": "iobroker.solaredgemodbus",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "ioBroker adapter for SolarEdge Modbus values with scale factors and derived datapoints",
   "author": "SSPANNI",
   "license": "MIT",
