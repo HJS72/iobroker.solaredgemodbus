@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="SolarEdge Modbus icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="url(#bg)"/>
+
+  <circle cx="384" cy="132" r="54" fill="url(#sun)"/>
+  <g stroke="#facc15" stroke-width="10" stroke-linecap="round">
+    <line x1="384" y1="48" x2="384" y2="24"/>
+    <line x1="444" y1="72" x2="462" y2="54"/>
+    <line x1="468" y1="132" x2="492" y2="132"/>
+    <line x1="444" y1="192" x2="462" y2="210"/>
+    <line x1="324" y1="72" x2="306" y2="54"/>
+  </g>
+
+  <polygon points="96,322 334,238 374,356 136,440" fill="#0b1224" stroke="#93c5fd" stroke-width="10"/>
+
+  <g stroke="#60a5fa" stroke-width="8" opacity="0.95">
+    <line x1="138" y1="431" x2="336" y2="361"/>
+    <line x1="129" y1="401" x2="326" y2="331"/>
+    <line x1="120" y1="371" x2="317" y2="301"/>
+    <line x1="111" y1="341" x2="308" y2="271"/>
+
+    <line x1="176" y1="294" x2="216" y2="412"/>
+    <line x1="236" y1="273" x2="276" y2="391"/>
+    <line x1="296" y1="252" x2="336" y2="370"/>
+  </g>
+
+  <text x="78" y="118" fill="#e2e8f0" font-family="Verdana, sans-serif" font-size="54" font-weight="700">SE</text>
+</svg>

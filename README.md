@@ -1,5 +1,7 @@
 # ioBroker SolarEdge Modbus Adapter (Custom)
 
+![SolarEdge Modbus Icon](admin/solaredgemodbus.png)
+
 Dieser Adapter liest SolarEdge Modbus Register, rechnet Scale Factors um und legt die gewuenschten Datenpunkte in ioBroker an.
 
 ## Ziel-Datenpunkte
