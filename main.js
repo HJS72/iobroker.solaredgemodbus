@@ -386,7 +386,7 @@ class Solaredgemodbus extends utils.Adapter {
     ) {
       this.invalidBatteryOperatingStateAddressWarned = true;
       this.log.warn(
-        `Skipping Batterie_Betriebszustand read: invalid register address ${batteryOperatingStateAddress}`,
+        `Skipping Batterie_Betriebsmodus read: invalid register address ${batteryOperatingStateAddress}`,
       );
     }
 
@@ -433,6 +433,7 @@ class Solaredgemodbus extends utils.Adapter {
     const out = {};
     const CIRCUIT_BREAK_AFTER = 3;
     const CIRCUIT_BREAK_MS = 5 * 60 * 1000; // 5 minutes
+    const FATAL_ERROR_AFTER = 10;
     const now = Date.now();
 
     for (const group of groups) {
@@ -463,7 +464,17 @@ class Solaredgemodbus extends utils.Adapter {
         const prev = this.registerCircuitBreaker.get(group.start) || { consecutiveErrors: 0, skipUntil: 0 };
         const next = { consecutiveErrors: prev.consecutiveErrors + 1, skipUntil: 0 };
 
-        if (next.consecutiveErrors >= CIRCUIT_BREAK_AFTER) {
+        if (next.consecutiveErrors >= FATAL_ERROR_AFTER) {
+          const itemList = group.items.map((i) => `${i.key}(${i.address})`).join(", ");
+          this.log.error(
+            `Register block ${group.start}-${group.end} (${itemList}) failed ${next.consecutiveErrors}x. ` +
+              `Check adapter config: are register addresses configured correctly? Stopping adapter.`,
+          );
+          this.registerCircuitBreaker.set(group.start, next);
+          await this.setConnectionStatus(false);
+          this.terminate(`Register block ${group.start}-${group.end} unreachable after ${FATAL_ERROR_AFTER} attempts`);
+          return out;
+        } else if (next.consecutiveErrors >= CIRCUIT_BREAK_AFTER) {
           next.skipUntil = now + CIRCUIT_BREAK_MS;
           this.log.warn(
             `Register block ${group.start}-${group.end} failed ${next.consecutiveErrors}x in a row (${err.message}). Pausing for 5 min.`,
@@ -752,7 +763,7 @@ class Solaredgemodbus extends utils.Adapter {
       await this.setNumberState("Batterie_SOC_min", batterySocMin, 1);
       await this.setNumberState("Batterie_Time", batteryTime, 2);
       await this.setStringState("Batterie_Uhrzeit", batteryTargetClock);
-      await this.setNumberState("Batterie_Betriebszustand", batteryOperatingState, 0);
+      await this.setNumberState("Batterie_Betriebsmodus", batteryOperatingState, 0);
 
       await this.setNumberState("PV_Leistung", pvPowerOut, 1);
       await this.setNumberState("PV_Energie_Gesamt", pvEnergyTotal, 1);

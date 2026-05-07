@@ -57,14 +57,14 @@
     "registers": {
       "inverterAcPower": 40083,
       "inverterAcPowerSf": 40084,
-      "inverterAcEnergyWh": 40094,
-      "inverterAcEnergyWhSf": 40096,
-      "meterAcPower": 40207,
-      "meterAcPowerSf": 40211,
-      "batteryDcPower": 57716,
-      "batteryEnergyMax": 57726,
-      "batterySoc": 57732,
-      "batteryOperatingState": 103237
+      "inverterAcEnergyWh": 40095,
+      "inverterAcEnergyWhSf": 40097,
+      "meterAcPower": 40208,
+      "meterAcPowerSf": 40212,
+      "batteryDcPower": 102837,
+      "batteryEnergyMax": 102787,
+      "batterySoc": 102853,
+      "batteryOperatingState": 103238
     }
   },
   "objects": [],
