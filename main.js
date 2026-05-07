@@ -391,10 +391,6 @@ class Solaredgemodbus extends utils.Adapter {
       );
     }
 
-    if (Number(registers.batterySocMin) > 0) {
-      defs.push({ key: "battSocMin", address: registers.batterySocMin, len: 2 });
-    }
-
     return defs.map((d) => ({
       ...d,
       offset: this.toOffset(d.address),
@@ -547,11 +543,8 @@ class Solaredgemodbus extends utils.Adapter {
         ? batteryOperatingStateRaw
         : null;
 
-      let batterySocMin;
-      if (raw.battSocMin) {
-        const battSocMinRegs = raw.battSocMin;
-        batterySocMin = this.regsToFloat32LittleWord(battSocMinRegs[0], battSocMinRegs[1]);
-      }
+      const configuredSocMin = Number(this.config.batterySocMin);
+      let batterySocMin = configuredSocMin > 0 ? configuredSocMin : undefined;
 
       const efficiency = Math.min(1, Math.max(0.5, Number(this.config.batteryAcEfficiency) || 0.96));
       const formulaCtx = {
@@ -563,7 +556,6 @@ class Solaredgemodbus extends utils.Adapter {
         batteryEnergyMax,
         batteryEnergyAvailable,
         batterySoc,
-        batterySocMinRegister: batterySocMin,
         batteryImportEnergyWh,
         batteryExportEnergyWh,
         batteryAcEfficiency: efficiency,

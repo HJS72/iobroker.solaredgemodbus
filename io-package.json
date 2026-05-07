@@ -39,13 +39,13 @@
     "port": 1502,
     "unitId": 1,
     "pollIntervalSec": 10,
+    "batterySocMin": 0,
     "invertGridPowerSign": false,
     "batteryAcEfficiency": 0.96,
     "formulas": {
       "Batterie_Energie_max": "batteryEnergyMax",
       "Batterie_Leistung": "batteryDcPower * batteryAcEfficiency",
       "Batterie_SOC": "batterySoc",
-      "Batterie_SOC_min": "batterySocMin",
       "Batterie_Time": "batteryAcPower > 0 ? batteryEnergyAvailable / batteryAcPower : (batteryAcPower < 0 ? (batteryEnergyMaxOut - batteryEnergyAvailable) / Math.abs(batteryAcPower) : null)",
       "PV_Leistung": "solaredgePower === null || batteryAcPower === null ? solaredgePower : (batteryAcPower > 0 ? solaredgePower + batteryAcPower : solaredgePower - Math.abs(batteryAcPower))",
       "PV_Energie_Gesamt": "inverterEnergyWh",
@@ -67,7 +67,6 @@
       "batterySoc": 57732,
       "batteryImportEnergyWh": 57722,
       "batteryExportEnergyWh": 57718,
-      "batterySocMin": 0,
       "batteryOperatingState": 103237
     }
   },

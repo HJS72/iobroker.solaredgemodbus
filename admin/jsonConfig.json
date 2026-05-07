@@ -59,6 +59,17 @@
           "xs": 12,
           "sm": 4,
           "md": 3
+        },
+        "batterySocMin": {
+          "type": "number",
+          "label": "Battery SOC Min % (0 = Tagesminimum auto)",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "newLine": true,
+          "xs": 12,
+          "sm": 4,
+          "md": 3
         }
       }
     },
@@ -155,14 +166,6 @@
           "sm": 4,
           "md": 3
         },
-        "registers.batterySocMin": {
-          "type": "number",
-          "label": "Battery SOC Min (optional float32, 0=calc)",
-          "newLine": true,
-          "xs": 12,
-          "sm": 4,
-          "md": 3
-        },
         "registers.batteryOperatingState": {
           "type": "number",
           "label": "Battery Operating State (uint32 word-swap)",
@@ -194,13 +197,6 @@
         "formulas.Batterie_SOC": {
           "type": "text",
           "label": "Batterie_SOC",
-          "xs": 12,
-          "sm": 12,
-          "md": 12
-        },
-        "formulas.Batterie_SOC_min": {
-          "type": "text",
-          "label": "Batterie_SOC_min",
           "xs": 12,
           "sm": 12,
           "md": 12
