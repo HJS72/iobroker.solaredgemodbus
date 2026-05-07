@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "solaredgemodbus",
-    "version": "1.0.2",
+    "version": "1.0.5",
     "titleLang": {
       "en": "SolarEdge Modbus",
       "de": "SolarEdge Modbus"
@@ -39,6 +39,9 @@
     "port": 1502,
     "unitId": 1,
     "modbusTimeoutMs": 7000,
+    "maxReadLen": 40,
+    "readIntervalMs": 150,
+    "writeIntervalMs": 100,
     "pollIntervalSec": 1,
     "batterySocMin": 0,
     "invertGridPowerSign": false,

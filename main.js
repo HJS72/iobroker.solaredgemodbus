@@ -48,6 +48,7 @@ class Solaredgemodbus extends utils.Adapter {
     this.client = new ModbusRTU();
     this.pollTimer = null;
     this.pollInProgress = false;
+    this.lastWriteTs = 0;
     this.dayCache = {
       dateKey: "",
       minSoc: null,
@@ -241,7 +242,13 @@ class Solaredgemodbus extends utils.Adapter {
 
     try {
       await this.ensureConnected();
+      const writeIntervalMs = Math.max(0, Number(this.config.writeIntervalMs) || 100);
+      const elapsedSinceLastWrite = Date.now() - this.lastWriteTs;
+      if (elapsedSinceLastWrite < writeIntervalMs) {
+        await this.waitMs(writeIntervalMs - elapsedSinceLastWrite);
+      }
       await this.client.writeRegister(this.toOffset(registerAddress), writeValue & 0xffff);
+      this.lastWriteTs = Date.now();
       await this.setStateAsync("Batterie_Betriebsmodus", { val: writeValue, ack: true });
       await this.setConnectionStatus(true);
       this.log.info(`Wrote register ${registerAddress} with value ${writeValue}`);
@@ -284,6 +291,13 @@ class Solaredgemodbus extends utils.Adapter {
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
     return `${hh}:${mm}`;
+  }
+
+  async waitMs(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   calcBatteryTargetClock(batterySoc, batteryAcPower, batterySocMin, batteryEnergyMaxWh) {
@@ -438,7 +452,7 @@ class Solaredgemodbus extends utils.Adapter {
 
   mergeReadPlan(defs) {
     const sorted = [...defs].sort((a, b) => a.offset - b.offset);
-    const maxGroupLen = 120;
+    const maxGroupLen = Math.max(2, Math.min(120, Number(this.config.maxReadLen) || 40));
     // Keep value/SF pairs (e.g. 40207 + 40211) in one read block.
     const maxGap = 4;
     const groups = [];
@@ -474,6 +488,7 @@ class Solaredgemodbus extends utils.Adapter {
     const CIRCUIT_BREAK_AFTER = 3;
     const CIRCUIT_BREAK_MS = 5 * 60 * 1000; // 5 minutes
     const FATAL_ERROR_AFTER = 10;
+    const readIntervalMs = Math.max(0, Number(this.config.readIntervalMs) || 150);
     const now = Date.now();
 
     for (const group of groups) {
@@ -483,6 +498,7 @@ class Solaredgemodbus extends utils.Adapter {
           const cached = this.lastGoodRawByKey.get(item.key);
           out[item.key] = Array.isArray(cached) ? cached.slice() : Array(item.len).fill(null);
         }
+        await this.waitMs(readIntervalMs);
         continue;
       }
 
@@ -500,6 +516,7 @@ class Solaredgemodbus extends utils.Adapter {
           out[item.key] = slice;
           this.lastGoodRawByKey.set(item.key, slice.slice());
         }
+        await this.waitMs(readIntervalMs);
       } catch (err) {
         const prev = this.registerCircuitBreaker.get(group.start) || { consecutiveErrors: 0, skipUntil: 0 };
         const next = { consecutiveErrors: prev.consecutiveErrors + 1, skipUntil: 0 };
@@ -525,6 +542,7 @@ class Solaredgemodbus extends utils.Adapter {
           const cached = this.lastGoodRawByKey.get(item.key);
           out[item.key] = Array.isArray(cached) ? cached.slice() : Array(item.len).fill(null);
         }
+        await this.waitMs(readIntervalMs);
       }
     }
 

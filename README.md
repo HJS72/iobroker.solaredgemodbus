@@ -100,6 +100,17 @@ Bei ungueltiger Formel faellt der Adapter automatisch auf die Standardformel zur
 - Legacy-Eintraege mit zero-based Adressen werden automatisch nach absolut konvertiert (z. B. `15` -> `40016`) und einmalig als Warnung geloggt.
 - Register werden gebuendelt (Batch-Reads) gelesen, um deutlich weniger Modbus-Requests zu erzeugen.
 
+## Kommunikationstuning
+
+Diese Parameter sind in den Adapter-Einstellungen verfuegbar:
+
+- `modbusTimeoutMs` (Default `7000`)
+- `maxReadLen` (Default `40`)
+- `readIntervalMs` (Default `150`)
+- `writeIntervalMs` (Default `100`)
+
+Empfehlung bei Timeouts: `pollIntervalSec=3..5`, `modbusTimeoutMs=10000..15000`, `maxReadLen=30..60`, `readIntervalMs=100..250`.
+
 ## Troubleshooting: Leistungs- und Energiewerte sind leer
 
 Wenn `Solaredge_Leistung`, `Solaredge_Energie_Tag`, `PV_Leistung` oder `PV_Energie_Tag` keinen Wert zeigen, prüfe:

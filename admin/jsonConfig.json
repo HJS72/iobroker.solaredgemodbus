@@ -52,6 +52,36 @@
           "sm": 3,
           "md": 2
         },
+        "maxReadLen": {
+          "type": "number",
+          "label": "Max read request length (registers)",
+          "min": 2,
+          "max": 120,
+          "step": 1,
+          "xs": 12,
+          "sm": 3,
+          "md": 3
+        },
+        "readIntervalMs": {
+          "type": "number",
+          "label": "Read interval between blocks (ms)",
+          "min": 0,
+          "max": 2000,
+          "step": 10,
+          "xs": 12,
+          "sm": 3,
+          "md": 3
+        },
+        "writeIntervalMs": {
+          "type": "number",
+          "label": "Write interval (ms)",
+          "min": 0,
+          "max": 2000,
+          "step": 10,
+          "xs": 12,
+          "sm": 3,
+          "md": 3
+        },
         "invertGridPowerSign": {
           "type": "checkbox",
           "label": "Invert grid power sign",
