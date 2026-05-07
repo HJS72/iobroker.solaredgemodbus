@@ -97,20 +97,17 @@ Bei ungueltiger Formel faellt der Adapter automatisch auf die Standardformel zur
 - Legacy-Eintraege mit zero-based Adressen werden automatisch nach absolut konvertiert (z. B. `15` -> `40016`) und einmalig als Warnung geloggt.
 - Register werden gebuendelt (Batch-Reads) gelesen, um deutlich weniger Modbus-Requests zu erzeugen.
 
-## Battery Operating State (Register 103237)
+## Battery Operating Mode (Register 103237)
 
-- Der Datenpunkt `Batterie_Betriebszustand` ist les- und schreibbar.
+- Der Datenpunkt `Batterie_Betriebsmodus` ist les- und schreibbar.
 - Register-Adresse: `registers.batteryOperatingState` (Default `103237`).
 - Kodierung: `unsigned32`, `big-endian`, `word-swap`.
 - Zulaessige Werte:
-  - `0` Off
-  - `1` Standby
-  - `2` Init
-  - `3` Charge
-  - `4` Discharge
-  - `5` Fault
-  - `7` Idle
-- Bei `ack=false` schreibt der Adapter den Zustand auf den Wechselrichter.
+  - `0` Disabled (Speicherkontrolle deaktiviert)
+  - `1` Maximize Self Consumption (Eigenverbrauch optimieren – Standard)
+  - `2` Remote Control (Fernsteuerung)
+  - `4` Remote Control (Alternativer Steuermodus)
+- Bei `ack=false` schreibt der Adapter den Modus auf den Wechselrichter.
 
 ## Testwrapper (lokal + SolarEdge Cloud Vergleich)
 

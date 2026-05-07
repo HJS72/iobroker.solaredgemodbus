@@ -8,23 +8,20 @@ const SUNSPEC_SF_MAX = 10;
 const SUNSPEC_NOT_IMPL_INT16 = -32768;
 const SUNSPEC_NOT_IMPL_UINT32 = 0xffffffff;
 const REMOVED_STATES = ["Solaredge_Energie_Gesamt"];
-const BATTERY_OPERATING_STATE_VALUES = [0, 1, 2, 3, 4, 5, 7];
+const BATTERY_OPERATING_STATE_VALUES = [0, 1, 2, 4];
 
 const STATES = [
   { id: "Modbus_Status", role: "indicator.connected", type: "boolean" },
   {
-    id: "Batterie_Betriebszustand",
+    id: "Batterie_Betriebsmodus",
     role: "value",
     type: "number",
     write: true,
     states: {
-      "0": "Off",
-      "1": "Standby",
-      "2": "Init",
-      "3": "Charge",
-      "4": "Discharge",
-      "5": "Fault",
-      "7": "Idle",
+      "0": "Disabled",
+      "1": "Maximize Self Consumption",
+      "2": "Remote Control",
+      "4": "Remote Control (Alternative)",
     },
   },
   { id: "Batterie_Energie_max", unit: "Wh", role: "value.energy", decimals: 1 },
@@ -171,7 +168,7 @@ class Solaredgemodbus extends utils.Adapter {
       return;
     }
 
-    if (!id.endsWith(".Batterie_Betriebszustand")) {
+    if (!id.endsWith(".Batterie_Betriebsmodus")) {
       return;
     }
 
@@ -184,13 +181,13 @@ class Solaredgemodbus extends utils.Adapter {
     );
     if (!Number.isFinite(registerAddress)) {
       this.log.warn(
-        `Batterie_Betriebszustand write skipped: invalid register address ${configuredRegisterAddress}`,
+        `Batterie_Betriebsmodus write skipped: invalid register address ${configuredRegisterAddress}`,
       );
       return;
     }
     const writeValue = this.normalizeBatteryOperatingState(Number(state.val));
     if (writeValue === null) {
-      this.log.warn(`Batterie_Betriebszustand write ignored: invalid value ${state.val}`);
+      this.log.warn(`Batterie_Betriebsmodus write ignored: invalid value ${state.val}`);
       return;
     }
 
@@ -200,7 +197,7 @@ class Solaredgemodbus extends utils.Adapter {
       const lowWord = writeValue & 0xffff;
       const highWord = (writeValue >>> 16) & 0xffff;
       await this.client.writeRegisters(this.toOffset(registerAddress), [lowWord, highWord]);
-      await this.setStateAsync("Batterie_Betriebszustand", { val: writeValue, ack: true });
+      await this.setStateAsync("Batterie_Betriebsmodus", { val: writeValue, ack: true });
       await this.setConnectionStatus(true);
       this.log.info(`Wrote register ${registerAddress} with value ${writeValue}`);
     } catch (err) {
