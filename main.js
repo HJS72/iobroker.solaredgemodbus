@@ -336,11 +336,15 @@ class Solaredgemodbus extends utils.Adapter {
       !Number.isFinite(batteryEnergyMaxWh) ||
       batteryEnergyMaxWh <= 0
     ) {
+      this.log.debug(
+        `[calcBatteryTargetClock] Early exit: batterySoc=${batterySoc}, batteryAcPower=${batteryAcPower}, batteryEnergyMaxWh=${batteryEnergyMaxWh}`,
+      );
       return null;
     }
 
     const powerAbs = Math.abs(batteryAcPower);
     if (powerAbs < 1) {
+      this.log.debug(`[calcBatteryTargetClock] Power too small (${batteryAcPower}W), returning null`);
       return null;
     }
 
@@ -353,16 +357,27 @@ class Solaredgemodbus extends utils.Adapter {
     }
 
     if (!Number.isFinite(deltaSoc) || deltaSoc <= 0) {
+      this.log.debug(`[calcBatteryTargetClock] deltaSoc invalid or zero (${deltaSoc}%), returning now`);
       return this.formatLocalClock(Date.now());
     }
 
     const requiredWh = (batteryEnergyMaxWh * deltaSoc) / 100;
     const hours = requiredWh / powerAbs;
+    const targetMs = Date.now() + hours * 3600 * 1000;
+    const targetClock = this.formatLocalClock(targetMs);
+
+    this.log.debug(
+      `[calcBatteryTargetClock] batterySoc=${batterySoc}%, batteryAcPower=${batteryAcPower}W, ` +
+        `batteryEnergyMaxWh=${batteryEnergyMaxWh}Wh, deltaSoc=${deltaSoc}%, requiredWh=${requiredWh.toFixed(0)}Wh, ` +
+        `hours=${hours.toFixed(2)}h, target=${targetClock}`,
+    );
+
     if (!Number.isFinite(hours) || hours < 0) {
+      this.log.debug(`[calcBatteryTargetClock] Hours invalid (${hours}), returning null`);
       return null;
     }
 
-    return this.formatLocalClock(Date.now() + hours * 3600 * 1000);
+    return targetClock;
   }
 
   applyScale(raw, sf, rawType = "number") {
