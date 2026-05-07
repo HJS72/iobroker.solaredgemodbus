@@ -65,6 +65,8 @@ class Solaredgemodbus extends utils.Adapter {
     // Circuit-breaker: tracks consecutive timeouts per register block
     // Map<groupStart, { consecutiveErrors: number, skipUntil: number }>
     this.registerCircuitBreaker = new Map();
+    // Cache of last successful raw register slices to avoid value flicker on transient timeouts.
+    this.lastGoodRawByKey = new Map();
 
     this.on("ready", this.onReady.bind(this));
     this.on("unload", this.onUnload.bind(this));
@@ -402,7 +404,8 @@ class Solaredgemodbus extends utils.Adapter {
   mergeReadPlan(defs) {
     const sorted = [...defs].sort((a, b) => a.offset - b.offset);
     const maxGroupLen = 120;
-    const maxGap = 2;
+    // Keep value/SF pairs (e.g. 40207 + 40211) in one read block.
+    const maxGap = 4;
     const groups = [];
 
     for (const item of sorted) {
@@ -441,7 +444,8 @@ class Solaredgemodbus extends utils.Adapter {
       const cb = this.registerCircuitBreaker.get(group.start);
       if (cb && cb.skipUntil > now) {
         for (const item of group.items) {
-          out[item.key] = Array(item.len).fill(null);
+          const cached = this.lastGoodRawByKey.get(item.key);
+          out[item.key] = Array.isArray(cached) ? cached.slice() : Array(item.len).fill(null);
         }
         continue;
       }
@@ -456,7 +460,9 @@ class Solaredgemodbus extends utils.Adapter {
 
         for (const item of group.items) {
           const start = item.offset - group.start;
-          out[item.key] = data.slice(start, start + item.len);
+          const slice = data.slice(start, start + item.len);
+          out[item.key] = slice;
+          this.lastGoodRawByKey.set(item.key, slice.slice());
         }
       } catch (err) {
         const prev = this.registerCircuitBreaker.get(group.start) || { consecutiveErrors: 0, skipUntil: 0 };
@@ -473,7 +479,8 @@ class Solaredgemodbus extends utils.Adapter {
 
         this.registerCircuitBreaker.set(group.start, next);
         for (const item of group.items) {
-          out[item.key] = Array(item.len).fill(null);
+          const cached = this.lastGoodRawByKey.get(item.key);
+          out[item.key] = Array.isArray(cached) ? cached.slice() : Array(item.len).fill(null);
         }
       }
     }

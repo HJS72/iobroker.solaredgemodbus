@@ -40,6 +40,7 @@ const pvDayEnergy = {
   lastTs: null,
   lastPower: null,
 };
+const lastGoodRawByKey = new Map();
 
 function toOffset(address, addressMode) {
   if (addressMode === "zeroBased") {
@@ -282,7 +283,8 @@ async function readBatched(defs, addressMode) {
 
   const groups = [];
   const maxLen = 120;
-  const maxGap = 2;
+  // Keep value/SF pairs in one read block to avoid mismatched scaling.
+  const maxGap = 4;
 
   for (const item of items) {
     const end = item.offset + item.len - 1;
@@ -308,11 +310,14 @@ async function readBatched(defs, addressMode) {
       const res = await client.readHoldingRegisters(group.start, len);
       for (const item of group.items) {
         const idx = item.offset - group.start;
-        out[item.key] = res.data.slice(idx, idx + item.len);
+        const slice = res.data.slice(idx, idx + item.len);
+        out[item.key] = slice;
+        lastGoodRawByKey.set(item.key, slice.slice());
       }
     } catch {
       for (const item of group.items) {
-        out[item.key] = Array(item.len).fill(null);
+        const cached = lastGoodRawByKey.get(item.key);
+        out[item.key] = Array.isArray(cached) ? cached.slice() : Array(item.len).fill(null);
       }
     }
   }
