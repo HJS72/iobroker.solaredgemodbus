@@ -567,10 +567,11 @@ class Solaredgemodbus extends utils.Adapter {
     const host = this.config.host;
     const port = Number(this.config.port) || 1502;
     const unitId = Number(this.config.unitId) || 1;
+    const timeoutMs = Math.max(1000, Number(this.config.modbusTimeoutMs) || 7000);
 
     await this.client.connectTCP(host, { port });
     this.client.setID(unitId);
-    this.client.setTimeout(4000);
+    this.client.setTimeout(timeoutMs);
   }
 
   async pollOnce() {
