@@ -60,6 +60,7 @@ class Solaredgemodbus extends utils.Adapter {
       lastPvPower: null,
     };
     this.formulaWarnings = new Set();
+    this.invalidBatteryOperatingStateAddressWarned = false;
 
     this.on("ready", this.onReady.bind(this));
     this.on("unload", this.onUnload.bind(this));
@@ -68,6 +69,7 @@ class Solaredgemodbus extends utils.Adapter {
 
   async onReady() {
     await this.ensureStates();
+    await this.ensureInfoConnectionObject();
     await this.cleanupRemovedStates();
     await this.setConnectionStatus(false);
     await this.pollOnce();
@@ -110,6 +112,28 @@ class Solaredgemodbus extends utils.Adapter {
     }
   }
 
+  async ensureInfoConnectionObject() {
+    await this.setObjectNotExistsAsync("info.connection", {
+      type: "state",
+      common: {
+        name: "If adapter is connected",
+        type: "boolean",
+        role: "indicator.connected",
+        read: true,
+        write: false,
+      },
+      native: {},
+    });
+  }
+
+  isAddressUsable(address) {
+    if (!Number.isFinite(address)) {
+      return false;
+    }
+    const mode = this.config.addressMode || "absolute40001";
+    return mode === "zeroBased" ? address >= 0 : address >= 40001;
+  }
+
   normalizeBatteryOperatingState(value) {
     if (!Number.isFinite(value)) {
       return null;
@@ -127,7 +151,15 @@ class Solaredgemodbus extends utils.Adapter {
       return;
     }
 
-    const registerAddress = Number(this.config.registers?.batteryOperatingState) || 103237;
+    const registerAddress = Number(
+      this.config.registers?.batteryOperatingState ?? this.config.registers?.write103237,
+    ) || 103237;
+    if (!this.isAddressUsable(registerAddress)) {
+      this.log.warn(
+        `Batterie_Betriebszustand write skipped: address ${registerAddress} invalid for addressMode ${this.config.addressMode || "absolute40001"}`,
+      );
+      return;
+    }
     const writeValue = this.normalizeBatteryOperatingState(Number(state.val));
     if (writeValue === null) {
       this.log.warn(`Batterie_Betriebszustand write ignored: invalid value ${state.val}`);
@@ -322,8 +354,23 @@ class Solaredgemodbus extends utils.Adapter {
       { key: "battSoc", address: registers.batterySoc, len: 2 },
       { key: "battImport", address: registers.batteryImportEnergyWh, len: 4 },
       { key: "battExport", address: registers.batteryExportEnergyWh, len: 4 },
-      { key: "battOperatingState", address: registers.batteryOperatingState, len: 2 },
     ];
+
+    const batteryOperatingStateAddress = Number(
+      registers.batteryOperatingState ?? registers.write103237,
+    );
+    if (this.isAddressUsable(batteryOperatingStateAddress)) {
+      defs.push({ key: "battOperatingState", address: batteryOperatingStateAddress, len: 2 });
+      this.invalidBatteryOperatingStateAddressWarned = false;
+    } else if (
+      Number.isFinite(batteryOperatingStateAddress) &&
+      !this.invalidBatteryOperatingStateAddressWarned
+    ) {
+      this.invalidBatteryOperatingStateAddressWarned = true;
+      this.log.warn(
+        `Skipping Batterie_Betriebszustand read: address ${batteryOperatingStateAddress} invalid for addressMode ${this.config.addressMode || "absolute40001"}`,
+      );
+    }
 
     if (Number(registers.batterySocMin) > 0) {
       defs.push({ key: "battSocMin", address: registers.batterySocMin, len: 2 });
