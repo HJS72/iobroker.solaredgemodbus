@@ -6,19 +6,20 @@ Dieser Adapter liest SolarEdge Modbus Register, rechnet Scale Factors um und leg
 
 ## Ziel-Datenpunkte
 
+- Modbus_Status
 - Batterie_Energie_max
 - Batterie_Leistung
 - Batterie_SOC
 - Batterie_SOC_min
 - Batterie_Time
 - Batterie_Uhrzeit
+- Batterie_Betriebsmodus (schreibbar)
 - PV_Leistung
 - PV_Energie_Gesamt
 - PV_Energie_Tag
 - Solaredge_Leistung
 - Solaredge_Energie_Tag
 - Grid_Leistung
-- Batterie_Betriebszustand (schreibbar)
 
 ## Verwendete Register (Default)
 
