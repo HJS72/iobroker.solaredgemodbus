@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "solaredgemodbus",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "titleLang": {
       "en": "SolarEdge Modbus",
       "de": "SolarEdge Modbus"
@@ -56,8 +56,11 @@
       "PV_Energie_Gesamt": "inverterEnergyWh",
       "PV_Energie_Tag": "",
       "Solaredge_Leistung": "inverterAcPower",
+      "Solaredge_Energie_Gesamt": "inverterEnergyWh",
       "Solaredge_Energie_Tag": "",
-      "Grid_Leistung": "gridPower"
+      "Grid_Leistung": "gridPower",
+      "Grid_Energie_Gesamt": "",
+      "Grid_Energie_Tag": ""
     },
     "registers": {
       "inverterAcPower": 40084,

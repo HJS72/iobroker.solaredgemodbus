@@ -7,7 +7,7 @@ const SUNSPEC_SF_MIN = -10;
 const SUNSPEC_SF_MAX = 10;
 const SUNSPEC_NOT_IMPL_INT16 = -32768;
 const SUNSPEC_NOT_IMPL_UINT32 = 0xffffffff;
-const REMOVED_STATES = ["Solaredge_Energie_Gesamt"];
+const REMOVED_STATES = [];
 const BATTERY_STORAGE_MODE_VALUES = [0, 1, 2, 4];
 
 const STATES = [
@@ -36,8 +36,11 @@ const STATES = [
   { id: "PV_Energie_Gesamt", unit: "Wh", role: "value.energy", decimals: 1 },
   { id: "PV_Energie_Tag", unit: "Wh", role: "value.energy", decimals: 1 },
   { id: "Solaredge_Leistung", unit: "W", role: "value.power", decimals: 1 },
+  { id: "Solaredge_Energie_Gesamt", unit: "Wh", role: "value.energy", decimals: 1 },
   { id: "Solaredge_Energie_Tag", unit: "Wh", role: "value.energy", decimals: 1 },
   { id: "Grid_Leistung", unit: "W", role: "value.power", decimals: 1 },
+  { id: "Grid_Energie_Gesamt", unit: "Wh", role: "value.energy", decimals: 1 },
+  { id: "Grid_Energie_Tag", unit: "Wh", role: "value.energy", decimals: 1 },
 ];
 
 class Solaredgemodbus extends utils.Adapter {
@@ -57,12 +60,15 @@ class Solaredgemodbus extends utils.Adapter {
       solaredgeDayWhIntegrated: 0,
       pvDayWhIntegrated: 0,
       batteryDayWhIntegrated: 0,
+      gridDayWhIntegrated: 0,
       lastSampleTs: null,
       lastSolaredgePower: null,
       lastPvPower: null,
       lastBatteryAcPower: null,
+      lastGridPower: null,
     };
     this.batteryEnergyTotal = 0;
+    this.gridEnergyTotal = 0;
     this.formulaWarnings = new Set();
     this.legacyAddressWarnings = new Set();
     this.diagnosticWarnings = new Set();
@@ -85,16 +91,23 @@ class Solaredgemodbus extends utils.Adapter {
     // Subscribe to changes of Batterie_Betriebsmodus state
     this.subscribeStates("Batterie_Betriebsmodus");
     
-    // Load persistent battery total energy
+    // Load persistent battery and grid total energy
     try {
       const batteryEnergyState = await this.getStateAsync("Batterie_Energie_Gesamt");
       if (batteryEnergyState && Number.isFinite(batteryEnergyState.val)) {
         this.batteryEnergyTotal = batteryEnergyState.val;
         this.log.debug(`Loaded persistent battery energy total: ${this.batteryEnergyTotal} Wh`);
       }
+
+      const gridEnergyState = await this.getStateAsync("Grid_Energie_Gesamt");
+      if (gridEnergyState && Number.isFinite(gridEnergyState.val)) {
+        this.gridEnergyTotal = gridEnergyState.val;
+        this.log.debug(`Loaded persistent grid energy total: ${this.gridEnergyTotal} Wh`);
+      }
     } catch {
-      this.log.warn("Failed to load persistent battery energy total, starting from 0");
+      this.log.warn("Failed to load persistent battery/grid energy totals, starting from 0");
       this.batteryEnergyTotal = 0;
+      this.gridEnergyTotal = 0;
     }
     
     await this.setConnectionStatus(false);
@@ -784,6 +797,14 @@ class Solaredgemodbus extends utils.Adapter {
         { ...formulaCtx, batteryAcPower, pvPower: pvPowerOut },
         inverterEnergyWh,
       );
+      const solaredgeEnergyTotalDefault = Number.isFinite(inverterEnergyWh)
+        ? Math.max(0, inverterEnergyWh)
+        : null;
+      const solaredgeEnergyTotal = this.evalFormula(
+        "Solaredge_Energie_Gesamt",
+        { ...formulaCtx, batteryAcPower, pvPower: pvPowerOut, pvEnergyTotal },
+        solaredgeEnergyTotalDefault,
+      );
       const batteryEnergyMaxOut = this.evalFormula("Batterie_Energie_max", formulaCtx, batteryEnergyMax);
       const batterySocOut = this.evalFormula("Batterie_SOC", formulaCtx, batterySoc);
 
@@ -795,6 +816,7 @@ class Solaredgemodbus extends utils.Adapter {
         this.dayCache.solaredgeDayWhIntegrated = 0;
         this.dayCache.pvDayWhIntegrated = 0;
         this.dayCache.batteryDayWhIntegrated = 0;
+        this.dayCache.gridDayWhIntegrated = 0;
         this.dayCache.lastSampleTs = nowTs;
         this.dayCache.lastSolaredgePower =
           typeof solaredgePower === "number" && Number.isFinite(solaredgePower)
@@ -807,6 +829,10 @@ class Solaredgemodbus extends utils.Adapter {
         this.dayCache.lastBatteryAcPower =
           typeof batteryAcPower === "number" && Number.isFinite(batteryAcPower)
             ? batteryAcPower
+            : null;
+        this.dayCache.lastGridPower =
+          typeof gridPower === "number" && Number.isFinite(gridPower)
+            ? gridPower
             : null;
       } else {
         const prevTs = this.dayCache.lastSampleTs;
@@ -825,11 +851,18 @@ class Solaredgemodbus extends utils.Adapter {
           typeof batteryAcPower === "number" && Number.isFinite(batteryAcPower)
             ? batteryAcPower
             : null;
+        const prevGrid = this.dayCache.lastGridPower;
+        const currGrid =
+          typeof gridPower === "number" && Number.isFinite(gridPower)
+            ? gridPower
+            : null;
 
-        if (prevTs && prevP !== null && currP !== null && nowTs > prevTs) {
+        if (prevTs && nowTs > prevTs) {
           const dtSec = (nowTs - prevTs) / 1000;
-          const avgPower = (prevP + currP) / 2;
-          this.dayCache.solaredgeDayWhIntegrated += (avgPower * dtSec) / 3600;
+          if (prevP !== null && currP !== null) {
+            const avgPower = (prevP + currP) / 2;
+            this.dayCache.solaredgeDayWhIntegrated += (avgPower * dtSec) / 3600;
+          }
 
           if (prevPv !== null && currPv !== null) {
             const avgPvPower = (prevPv + currPv) / 2;
@@ -843,12 +876,21 @@ class Solaredgemodbus extends utils.Adapter {
             this.dayCache.batteryDayWhIntegrated += battWhDelta;
             this.batteryEnergyTotal += battWhDelta;
           }
+
+          // Integrate grid exchange energy from absolute power.
+          if (prevGrid !== null && currGrid !== null) {
+            const avgGridPowerAbs = (Math.abs(prevGrid) + Math.abs(currGrid)) / 2;
+            const gridWhDelta = (avgGridPowerAbs * dtSec) / 3600;
+            this.dayCache.gridDayWhIntegrated += gridWhDelta;
+            this.gridEnergyTotal += gridWhDelta;
+          }
         }
 
         this.dayCache.lastSampleTs = nowTs;
         this.dayCache.lastSolaredgePower = currP;
         this.dayCache.lastPvPower = currPv;
         this.dayCache.lastBatteryAcPower = currBatt;
+        this.dayCache.lastGridPower = currGrid;
       }
 
       if (batterySocOut !== null) {
@@ -873,12 +915,25 @@ class Solaredgemodbus extends utils.Adapter {
           ? Math.max(0, this.dayCache.pvDayWhIntegrated)
           : null;
 
+      const gridEnergyDayDefault =
+        Number.isFinite(this.dayCache.gridDayWhIntegrated)
+          ? Math.max(0, this.dayCache.gridDayWhIntegrated)
+          : null;
+
+      const gridEnergyTotalDefault =
+        Number.isFinite(this.gridEnergyTotal)
+          ? Math.max(0, this.gridEnergyTotal)
+          : null;
+
       const dayCtx = {
         ...formulaCtx,
         solaredgePower,
         batteryAcPower,
         pvPower: pvPowerOut,
         pvEnergyTotal,
+        solaredgeEnergyTotal,
+        gridEnergyTotal: gridEnergyTotalDefault,
+        gridEnergyDay: gridEnergyDayDefault,
       };
 
       const solaredgeEnergyDay = this.evalFormula(
@@ -886,6 +941,20 @@ class Solaredgemodbus extends utils.Adapter {
         dayCtx,
         solaredgeEnergyDayDefault,
       );
+
+      const gridEnergyTotalRaw = this.evalFormula(
+        "Grid_Energie_Gesamt",
+        dayCtx,
+        gridEnergyTotalDefault,
+      );
+      const gridEnergyTotal = Number.isFinite(gridEnergyTotalRaw) ? gridEnergyTotalRaw : gridEnergyTotalDefault;
+      if (Number.isFinite(gridEnergyTotal)) {
+        this.gridEnergyTotal = gridEnergyTotal;
+      }
+
+      const gridEnergyDayRaw = this.evalFormula("Grid_Energie_Tag", dayCtx, gridEnergyDayDefault);
+      const gridEnergyDay = Number.isFinite(gridEnergyDayRaw) ? gridEnergyDayRaw : gridEnergyDayDefault;
+
       const pvEnergyDayRaw = this.evalFormula("PV_Energie_Tag", dayCtx, pvEnergyDayDefault);
       const pvEnergyDay = Number.isFinite(pvEnergyDayRaw) ? pvEnergyDayRaw : pvEnergyDayDefault;
 
@@ -964,9 +1033,12 @@ class Solaredgemodbus extends utils.Adapter {
       await this.setNumberState("PV_Energie_Tag", pvEnergyDay, 1);
 
       await this.setNumberState("Solaredge_Leistung", solaredgePower, 1);
+      await this.setNumberState("Solaredge_Energie_Gesamt", solaredgeEnergyTotal, 1);
       await this.setNumberState("Solaredge_Energie_Tag", solaredgeEnergyDay, 1);
 
       await this.setNumberState("Grid_Leistung", gridPower, 1);
+      await this.setNumberState("Grid_Energie_Gesamt", gridEnergyTotal, 1);
+      await this.setNumberState("Grid_Energie_Tag", gridEnergyDay, 1);
       await this.setConnectionStatus(true);
     } catch (err) {
       if (String(err.message || "").startsWith("Fatal register config error:")) {

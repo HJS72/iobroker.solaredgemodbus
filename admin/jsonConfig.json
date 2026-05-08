@@ -266,6 +266,13 @@
           "sm": 12,
           "md": 12
         },
+        "formulas.Solaredge_Energie_Gesamt": {
+          "type": "text",
+          "label": "Solaredge_Energie_Gesamt",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
         "formulas.Solaredge_Energie_Tag": {
           "type": "text",
           "label": "Solaredge_Energie_Tag",
@@ -276,6 +283,20 @@
         "formulas.Grid_Leistung": {
           "type": "text",
           "label": "Grid_Leistung",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Grid_Energie_Gesamt": {
+          "type": "text",
+          "label": "Grid_Energie_Gesamt",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Grid_Energie_Tag": {
+          "type": "text",
+          "label": "Grid_Energie_Tag",
           "xs": 12,
           "sm": 12,
           "md": 12
