@@ -26,6 +26,8 @@ const STATES = [
   },
   { id: "Batterie_Energie_max", unit: "Wh", role: "value.energy", decimals: 1 },
   { id: "Batterie_Leistung", unit: "W", role: "value.power", decimals: 1 },
+  { id: "Batterie_Energie_Gesamt", unit: "Wh", role: "value.energy", decimals: 1 },
+  { id: "Batterie_Energie_Tag", unit: "Wh", role: "value.energy", decimals: 1 },
   { id: "Batterie_SOC", unit: "%", role: "value.battery", decimals: 1 },
   { id: "Batterie_SOC_min", unit: "%", role: "value.battery", decimals: 1 },
   { id: "Batterie_Time", unit: "h", role: "value.interval", decimals: 2 },
@@ -54,10 +56,13 @@ class Solaredgemodbus extends utils.Adapter {
       minSoc: null,
       solaredgeDayWhIntegrated: 0,
       pvDayWhIntegrated: 0,
+      batteryDayWhIntegrated: 0,
       lastSampleTs: null,
       lastSolaredgePower: null,
       lastPvPower: null,
+      lastBatteryAcPower: null,
     };
+    this.batteryEnergyTotal = 0;
     this.formulaWarnings = new Set();
     this.legacyAddressWarnings = new Set();
     this.diagnosticWarnings = new Set();
@@ -79,6 +84,18 @@ class Solaredgemodbus extends utils.Adapter {
     
     // Subscribe to changes of Batterie_Betriebsmodus state
     this.subscribeStates("Batterie_Betriebsmodus");
+    
+    // Load persistent battery total energy
+    try {
+      const batteryEnergyState = await this.getStateAsync("Batterie_Energie_Gesamt");
+      if (batteryEnergyState && Number.isFinite(batteryEnergyState.val)) {
+        this.batteryEnergyTotal = batteryEnergyState.val;
+        this.log.debug(`Loaded persistent battery energy total: ${this.batteryEnergyTotal} Wh`);
+      }
+    } catch {
+      this.log.warn("Failed to load persistent battery energy total, starting from 0");
+      this.batteryEnergyTotal = 0;
+    }
     
     await this.setConnectionStatus(false);
     await this.runPollCycle();
@@ -777,6 +794,7 @@ class Solaredgemodbus extends utils.Adapter {
         this.dayCache.minSoc = batterySocOut;
         this.dayCache.solaredgeDayWhIntegrated = 0;
         this.dayCache.pvDayWhIntegrated = 0;
+        this.dayCache.batteryDayWhIntegrated = 0;
         this.dayCache.lastSampleTs = nowTs;
         this.dayCache.lastSolaredgePower =
           typeof solaredgePower === "number" && Number.isFinite(solaredgePower)
@@ -785,6 +803,10 @@ class Solaredgemodbus extends utils.Adapter {
         this.dayCache.lastPvPower =
           typeof pvPowerOut === "number" && Number.isFinite(pvPowerOut)
             ? pvPowerOut
+            : null;
+        this.dayCache.lastBatteryAcPower =
+          typeof batteryAcPower === "number" && Number.isFinite(batteryAcPower)
+            ? batteryAcPower
             : null;
       } else {
         const prevTs = this.dayCache.lastSampleTs;
@@ -798,6 +820,11 @@ class Solaredgemodbus extends utils.Adapter {
           typeof pvPowerOut === "number" && Number.isFinite(pvPowerOut)
             ? pvPowerOut
             : null;
+        const prevBatt = this.dayCache.lastBatteryAcPower;
+        const currBatt =
+          typeof batteryAcPower === "number" && Number.isFinite(batteryAcPower)
+            ? batteryAcPower
+            : null;
 
         if (prevTs && prevP !== null && currP !== null && nowTs > prevTs) {
           const dtSec = (nowTs - prevTs) / 1000;
@@ -808,11 +835,20 @@ class Solaredgemodbus extends utils.Adapter {
             const avgPvPower = (prevPv + currPv) / 2;
             this.dayCache.pvDayWhIntegrated += (avgPvPower * dtSec) / 3600;
           }
+
+          // Integrate battery discharge energy (only positive/discharge values)
+          if (prevBatt !== null && currBatt !== null && (prevBatt > 0 || currBatt > 0)) {
+            const avgBattPower = Math.max(0, (prevBatt + currBatt) / 2);
+            const battWhDelta = (avgBattPower * dtSec) / 3600;
+            this.dayCache.batteryDayWhIntegrated += battWhDelta;
+            this.batteryEnergyTotal += battWhDelta;
+          }
         }
 
         this.dayCache.lastSampleTs = nowTs;
         this.dayCache.lastSolaredgePower = currP;
         this.dayCache.lastPvPower = currPv;
+        this.dayCache.lastBatteryAcPower = currBatt;
       }
 
       if (batterySocOut !== null) {
@@ -915,6 +951,8 @@ class Solaredgemodbus extends utils.Adapter {
 
       await this.setNumberState("Batterie_Energie_max", batteryEnergyMaxOut, 1);
       await this.setNumberState("Batterie_Leistung", batteryAcPower, 1);
+      await this.setNumberState("Batterie_Energie_Gesamt", this.batteryEnergyTotal, 1);
+      await this.setNumberState("Batterie_Energie_Tag", this.dayCache.batteryDayWhIntegrated, 1);
       await this.setNumberState("Batterie_SOC", batterySocOut, 1);
       await this.setNumberState("Batterie_SOC_min", batterySocMin, 1);
       await this.setNumberState("Batterie_Time", batteryTime, 2);

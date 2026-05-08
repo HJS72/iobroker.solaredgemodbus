@@ -9,6 +9,8 @@ Dieser Adapter liest SolarEdge Modbus Register, rechnet Scale Factors um und leg
 - Modbus_Status
 - Batterie_Energie_max
 - Batterie_Leistung
+- Batterie_Energie_Gesamt
+- Batterie_Energie_Tag
 - Batterie_SOC
 - Batterie_SOC_min
 - Batterie_Time
@@ -79,6 +81,8 @@ Bei ungueltiger Formel faellt der Adapter automatisch auf die Standardformel zur
 - Solaredge_Energie_Tag = lokal integrierte Tagesenergie aus Solaredge_Leistung
 - PV_Energie_Tag = lokal integrierte Tagesenergie aus PV_Leistung
 - Batterie_Energie_max = Battery_Energy_Max
+- Batterie_Energie_Gesamt = kumulierte Entladeenergie seit Adapter-Start (aus Batterie_Leistung integriert, nur Entladung)
+- Batterie_Energie_Tag = heutige Entladeenergie (aus Batterie_Leistung integriert, nur positive Werte)
 
 ### Batteriestatus
 
