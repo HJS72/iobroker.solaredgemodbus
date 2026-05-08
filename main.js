@@ -818,22 +818,19 @@ class Solaredgemodbus extends utils.Adapter {
         this.dayCache.batteryDayWhIntegrated = 0;
         this.dayCache.gridDayWhIntegrated = 0;
         this.dayCache.lastSampleTs = nowTs;
-        this.dayCache.lastSolaredgePower =
-          typeof solaredgePower === "number" && Number.isFinite(solaredgePower)
-            ? solaredgePower
-            : null;
-        this.dayCache.lastPvPower =
-          typeof pvPowerOut === "number" && Number.isFinite(pvPowerOut)
-            ? pvPowerOut
-            : null;
-        this.dayCache.lastBatteryAcPower =
-          typeof batteryAcPower === "number" && Number.isFinite(batteryAcPower)
-            ? batteryAcPower
-            : null;
-        this.dayCache.lastGridPower =
-          typeof gridPower === "number" && Number.isFinite(gridPower)
-            ? gridPower
-            : null;
+        // Set lastPower values only if current measurements are valid (not null), so integration can start
+        if (typeof solaredgePower === "number" && Number.isFinite(solaredgePower)) {
+          this.dayCache.lastSolaredgePower = solaredgePower;
+        }
+        if (typeof pvPowerOut === "number" && Number.isFinite(pvPowerOut)) {
+          this.dayCache.lastPvPower = pvPowerOut;
+        }
+        if (typeof batteryAcPower === "number" && Number.isFinite(batteryAcPower)) {
+          this.dayCache.lastBatteryAcPower = batteryAcPower;
+        }
+        if (typeof gridPower === "number" && Number.isFinite(gridPower)) {
+          this.dayCache.lastGridPower = gridPower;
+        }
       } else {
         const prevTs = this.dayCache.lastSampleTs;
         const prevP = this.dayCache.lastSolaredgePower;
