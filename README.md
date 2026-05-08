@@ -23,8 +23,10 @@ Dieser Adapter liest SolarEdge Modbus Register, rechnet Scale Factors um und leg
 - Solaredge_Energie_Gesamt
 - Solaredge_Energie_Tag
 - Grid_Leistung
-- Grid_Energie_Gesamt
-- Grid_Energie_Tag
+- Grid_Bezug_Energie_Gesamt
+- Grid_Bezug_Energie_Tag
+- Grid_Einspeisung_Energie_Gesamt
+- Grid_Einspeisung_Energie_Tag
 
 ## Verwendete Register (Default)
 
@@ -84,8 +86,10 @@ Bei ungueltiger Formel faellt der Adapter automatisch auf die Standardformel zur
 - Solaredge_Energie_Gesamt = Inverter_AC_Energy_Total (AC)
 - Solaredge_Energie_Tag = lokal integrierte Tagesenergie aus Solaredge_Leistung
 - PV_Energie_Tag = lokal integrierte Tagesenergie aus PV_Leistung
-- Grid_Energie_Gesamt = lokal integrierte Gesamtenergie aus |Grid_Leistung| (absoluter Leistungsbetrag)
-- Grid_Energie_Tag = lokal integrierte Tagesenergie aus |Grid_Leistung| (absoluter Leistungsbetrag)
+- Grid_Bezug_Energie_Gesamt = lokal integrierte Gesamtenergie bei Grid_Leistung < 0 (Bezug)
+- Grid_Bezug_Energie_Tag = lokal integrierte Tagesenergie bei Grid_Leistung < 0 (Bezug)
+- Grid_Einspeisung_Energie_Gesamt = lokal integrierte Gesamtenergie bei Grid_Leistung > 0 (Einspeisung)
+- Grid_Einspeisung_Energie_Tag = lokal integrierte Tagesenergie bei Grid_Leistung > 0 (Einspeisung)
 - Batterie_Energie_max = Battery_Energy_Max
 - Batterie_Energie_Gesamt = kumulierte Entladeenergie seit Adapter-Start (aus Batterie_Leistung integriert, nur Entladung)
 - Batterie_Energie_Tag = heutige Entladeenergie (aus Batterie_Leistung integriert, nur positive Werte)

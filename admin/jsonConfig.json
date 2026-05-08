@@ -287,16 +287,30 @@
           "sm": 12,
           "md": 12
         },
-        "formulas.Grid_Energie_Gesamt": {
+        "formulas.Grid_Bezug_Energie_Gesamt": {
           "type": "text",
-          "label": "Grid_Energie_Gesamt",
+          "label": "Grid_Bezug_Energie_Gesamt",
           "xs": 12,
           "sm": 12,
           "md": 12
         },
-        "formulas.Grid_Energie_Tag": {
+        "formulas.Grid_Bezug_Energie_Tag": {
           "type": "text",
-          "label": "Grid_Energie_Tag",
+          "label": "Grid_Bezug_Energie_Tag",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Grid_Einspeisung_Energie_Gesamt": {
+          "type": "text",
+          "label": "Grid_Einspeisung_Energie_Gesamt",
+          "xs": 12,
+          "sm": 12,
+          "md": 12
+        },
+        "formulas.Grid_Einspeisung_Energie_Tag": {
+          "type": "text",
+          "label": "Grid_Einspeisung_Energie_Tag",
           "xs": 12,
           "sm": 12,
           "md": 12
